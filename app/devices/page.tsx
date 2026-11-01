@@ -87,37 +87,41 @@ export default function DevicesPage() {
   }
 
   const handleSave = async () => {
+    // Chặn bấm Lưu nhiều lần trong lúc đang kiểm tra/ghi DB (tránh tạo trùng mã)
+    if (isSaving) return
     const errors = validate()
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
       return
     }
     setFormErrors({})
-
-    // Mã thiết bị không được trùng (bỏ qua chính thiết bị đang sửa)
-    const normalized = formData.deviceId.trim().toUpperCase()
-    const existing = await findDeviceByDeviceId(normalized)
-    if (existing && existing.id !== editingDevice?.id) {
-      alert('Mã thiết bị này đã tồn tại. Vui lòng kiểm tra lại')
-      return
-    }
-
     setIsSaving(true)
-    const values = {
-      deviceId: normalized,
-      name: formData.name.trim(),
-      manufacturer: formData.manufacturer.trim(),
-      location: formData.location.trim(),
-    }
-    const ok = editingDevice ? await updateDevice(editingDevice.id, values) : !!(await createDevice(values))
-    if (!ok) {
-      alert('❌ Lưu thất bại! Vui lòng thử lại.')
+
+    try {
+      // Mã thiết bị không được trùng (bỏ qua chính thiết bị đang sửa)
+      const normalized = formData.deviceId.trim().toUpperCase()
+      const existing = await findDeviceByDeviceId(normalized)
+      if (existing && existing.id !== editingDevice?.id) {
+        alert('Mã thiết bị này đã tồn tại. Vui lòng kiểm tra lại')
+        return
+      }
+
+      const values = {
+        deviceId: normalized,
+        name: formData.name.trim(),
+        manufacturer: formData.manufacturer.trim(),
+        location: formData.location.trim(),
+      }
+      const ok = editingDevice ? await updateDevice(editingDevice.id, values) : !!(await createDevice(values))
+      if (!ok) {
+        alert('❌ Lưu thất bại! Vui lòng thử lại.')
+        return
+      }
+      await loadDevices()
+      setIsModalOpen(false)
+    } finally {
       setIsSaving(false)
-      return
     }
-    await loadDevices()
-    setIsModalOpen(false)
-    setIsSaving(false)
   }
 
   // Xóa cứng thiết bị (bảng devices không có cột is_deleted)

@@ -239,10 +239,12 @@ export async function getDevices(): Promise<Device[]> {
 export async function findDeviceByDeviceId(deviceId: string): Promise<{ id: number } | null> {
   const normalized = normalizeDeviceId(deviceId)
   if (!normalized) return null
+  // ilike không có wildcard = so sánh chính xác, không phân biệt hoa/thường.
+  // Escape % _ \ để chúng không bị hiểu là ký tự đại diện.
   const { data, error } = await supabase
     .from('devices')
     .select('id')
-    .ilike('device_id', normalized)
+    .ilike('device_id', normalized.replace(/[%_\\]/g, '\\$&'))
     .limit(1)
     .maybeSingle()
   if (error || !data) return null

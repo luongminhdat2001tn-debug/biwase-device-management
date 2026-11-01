@@ -1,6 +1,6 @@
 # Quản Lý Thiết Bị Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a `/devices` page that lists the `devices` table and lets permitted users create, edit, search, and delete devices.
 
@@ -47,7 +47,7 @@ Each line is verified in Task 4's manual checklist.
   - `deleteDevice(id: number): Promise<boolean>`
   - Permission id `'quan-ly-thiet-bi'` present in `CHUC_NANG_LIST`
 
-- [ ] **Step 1: Add the `Device` interface to `lib/constants.ts`**
+- [x] **Step 1: Add the `Device` interface to `lib/constants.ts`**
 
 Insert after the `Product` interface, with a Vietnamese section comment:
 
@@ -61,7 +61,7 @@ export interface Device {
 }
 ```
 
-- [ ] **Step 2: Add the permission to `CHUC_NANG_LIST`**
+- [x] **Step 2: Add the permission to `CHUC_NANG_LIST`**
 
 Append after the four `kho-*` entries (keep the existing commas correct):
 
@@ -69,7 +69,7 @@ Append after the four `kho-*` entries (keep the existing commas correct):
   { id: 'quan-ly-thiet-bi', name: 'Quản lý thiết bị', description: 'Có thể xem/thêm/sửa/xóa thiết bị' },
 ```
 
-- [ ] **Step 3: Add device functions to `lib/db.ts`**
+- [x] **Step 3: Add device functions to `lib/db.ts`**
 
 Add before the `HISTORY LOG` section. Each function logs via `console.error` and returns the same failure value the existing functions use (`[]`, `null`, `false`):
 
@@ -79,7 +79,7 @@ Add before the `HISTORY LOG` section. Each function logs via `console.error` and
 - `updateDevice` — build a snake_case object only for defined keys (`deviceId`→`device_id`, `name`, `manufacturer`, `location`), `.update(...).eq('id', id)`, return `true`/`false`.
 - `deleteDevice` — `.delete().eq('id', id)`, return `true`/`false`.
 
-- [ ] **Step 4: Add `mapDeviceFromDB`**
+- [x] **Step 4: Add `mapDeviceFromDB`**
 
 Next to `mapProductFromDB`:
 
@@ -97,12 +97,12 @@ function mapDeviceFromDB(row: any): Device {
 
 Update the file's header comment list of tables to include `devices`.
 
-- [ ] **Step 5: Verify the build**
+- [x] **Step 5: Verify the build**
 
 Run: `npm run build`
 Expected: build completes with no error. (TS errors are ignored by config; re-read the new signatures against the `Device` interface.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/constants.ts lib/db.ts
@@ -121,7 +121,7 @@ git commit -m "feat: add device type, permission, and data layer"
 
 **Permission rule (used in three places):** `const canManage = !!user && (user.isAdmin || (Array.isArray(user.chucNang) ? user.chucNang : [user.chucNang || '']).includes('quan-ly-thiet-bi'))`.
 
-- [ ] **Step 1: Scaffold the page shell, session, load, and list**
+- [x] **Step 1: Scaffold the page shell, session, load, and list**
 
 `'use client'`. Copy the outer structure and styling from `app/account/page.tsx` (lines 108-137): `<Sidebar />`, `flex-1 md:ml-64`, `p-4 md:p-8 bg-gray-50 min-h-screen`, `h1` "Quản Lý Thiết Bị", one `Card` with `border-l-4 border-l-blue-600`.
 
@@ -138,7 +138,7 @@ Render, inside the card:
 - When `user` is set and `!canManage`, render a permission `Card` with `AlertCircle` and text "Bạn không có quyền truy cập trang này. Vui lòng liên hệ quản trị viên." instead of the list card.
 - Return "Loading..." while `!user` (same as existing pages).
 
-- [ ] **Step 2: Add the shared add/edit modal**
+- [x] **Step 2: Add the shared add/edit modal**
 
 One modal rendered when `isModalOpen`. Title `editingDevice ? 'Sửa Thiết Bị' : 'Thêm Thiết Bị'`; `X` close button.
 
@@ -158,16 +158,16 @@ Fields (all required, label suffixed `*`, `className` with red border/background
 
 Footer: "Hủy" `Button variant="outline"` closing the modal; save `Button` labelled `editingDevice ? 'Cập Nhật' : 'Tạo Mới'`, `disabled={isSaving}`.
 
-- [ ] **Step 3: Add delete**
+- [x] **Step 3: Add delete**
 
 `handleDelete(device)`: `confirm(\`Bạn có chắc chắn muốn xóa "${device.name}"?\`)`; on yes `const ok = await deleteDevice(device.id)`; if `!ok` alert failure; else `await loadDevices()`.
 
-- [ ] **Step 4: Verify the build**
+- [x] **Step 4: Verify the build**
 
 Run: `npm run build`
 Expected: completes with no error and lists `/devices` in the route output.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/devices/page.tsx
@@ -184,7 +184,7 @@ git commit -m "feat: add device management page"
 **Interfaces:**
 - Consumes: permission id `'quan-ly-thiet-bi'` from Task 1.
 
-- [ ] **Step 1: Add the menu entry**
+- [x] **Step 1: Add the menu entry**
 
 Declare the array with an optional permission so TypeScript accepts the mixed shape:
 
@@ -200,7 +200,7 @@ Then add, after the `warehouse` entry:
 
 Import `HardDrive` from `lucide-react`.
 
-- [ ] **Step 2: Filter by permission**
+- [x] **Step 2: Filter by permission**
 
 Replace the `userName` string state with a `user` state object (`useState<any>(null)`) and in the footer replace `{userName}` with `{user?.name || user?.username || 'User'}`. In the effect that reads localStorage, `setUser(parsed)`.
 
@@ -212,12 +212,12 @@ const visible = !item.permission || !!user && (user.isAdmin || (Array.isArray(us
 
 and skip the item when `!visible`. Items without `permission` stay visible to everyone, as today.
 
-- [ ] **Step 3: Verify the build**
+- [x] **Step 3: Verify the build**
 
 Run: `npm run build`
 Expected: completes with no error.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add components/sidebar.tsx
