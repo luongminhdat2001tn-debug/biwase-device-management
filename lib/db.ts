@@ -6,7 +6,7 @@
 // KHÔNG trực tiếp gọi supabase.from() ở page.
 //
 // CÁC BẢNG:
-//   - accounts: Tài khoản người dùng
+//   - device_accounts: Tài khoản người dùng
 //   - products: Sản phẩm trong kho
 //   - history_log: Lịch sử thao tác kho
 //
@@ -18,16 +18,16 @@ import { supabase } from './supabase'
 import type { Account, Product, HistoryEntry } from './constants'
 
 // ==========================================
-// ACCOUNTS - Tài khoản
+// DEVICE_ACCOUNTS - Tài khoản
 // ==========================================
 
 /** Lấy tất cả tài khoản */
 export async function getAccountsFromDB(): Promise<Account[]> {
   const { data, error } = await supabase
-    .from('accounts')
+    .from('device_accounts')
     .select('*')
     .order('id', { ascending: true })
-  if (error) { console.error('getAccounts error:', error); return [] }
+  if (error) { console.error('getDeviceAccounts error:', error); return [] }
   // Map snake_case từ DB sang camelCase cho frontend
   return (data || []).map(mapAccountFromDB)
 }
@@ -35,7 +35,7 @@ export async function getAccountsFromDB(): Promise<Account[]> {
 /** Tìm tài khoản theo username + password (login) */
 export async function getAccountByCredentials(username: string, password: string): Promise<Account | null> {
   const { data, error } = await supabase
-    .from('accounts')
+    .from('device_accounts')
     .select('*')
     .eq('username', username)
     .eq('password', password)
@@ -48,7 +48,7 @@ export async function getAccountByCredentials(username: string, password: string
 /** Tạo tài khoản mới */
 export async function createAccount(account: Omit<Account, 'id'>): Promise<Account | null> {
   const { data, error } = await supabase
-    .from('accounts')
+    .from('device_accounts')
     .insert(mapAccountToDB(account))
     .select()
     .single()
@@ -67,7 +67,7 @@ export async function updateAccount(id: number, updates: Partial<Account>): Prom
   if (updates.status !== undefined) dbUpdates.status = updates.status
 
   const { error } = await supabase
-    .from('accounts')
+    .from('device_accounts')
     .update(dbUpdates)
     .eq('id', id)
   if (error) { console.error('updateAccount error:', error); return false }
@@ -77,7 +77,7 @@ export async function updateAccount(id: number, updates: Partial<Account>): Prom
 /** Xóa tài khoản */
 export async function deleteAccountFromDB(id: number): Promise<boolean> {
   const { error } = await supabase
-    .from('accounts')
+    .from('device_accounts')
     .delete()
     .eq('id', id)
   if (error) { console.error('deleteAccount error:', error); return false }

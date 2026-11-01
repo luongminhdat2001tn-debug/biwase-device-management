@@ -216,7 +216,7 @@ export default function LoginPage() {
           </h1>
           {/* Tên công ty - cập nhật theo yêu cầu */}
           <p className="text-xl md:text-3xl lg:text-4xl leading-relaxed tracking-wide mb-2 md:mb-4 font-bold text-gray-800">
-            Công Ty Cổ Phần Nước BIWASE LONG AN
+            Hệ thống bảo trì thiết bị
           </p>
           {/* Slogan */}
           <p className="text-base md:text-xl lg:text-2xl leading-8 tracking-wide opacity-70 font-light italic text-gray-600">
