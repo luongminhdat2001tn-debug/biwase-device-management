@@ -21,7 +21,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, Package, Users, LogOut as LogOut2, Archive, History, UserCog, Menu, X, Droplets } from 'lucide-react'
+import { User, Package, Users, LogOut as LogOut2, Archive, History, UserCog, Menu, X, Droplets, HardDrive } from 'lucide-react'
 import Image from 'next/image'
 
 // ------------------------------------------
@@ -29,9 +29,11 @@ import Image from 'next/image'
 // Mỗi mục gồm: id, label (tên hiển thị), icon, href (đường dẫn)
 // Thứ tự hiển thị từ trên xuống dưới
 // ------------------------------------------
-const MENU_ITEMS = [
+// permission (tùy chọn): chức năng cần có để thấy mục menu này
+const MENU_ITEMS: { id: string; label: string; icon: any; href: string; permission?: string }[] = [
   { id: 'dashboard', label: 'Thông Tin Nhân Viên', icon: User, href: '/dashboard' },
   { id: 'warehouse', label: 'Quản Lý Kho', icon: Package, href: '/warehouse' },
+  { id: 'devices', label: 'Quản Lý Thiết Bị', icon: HardDrive, href: '/devices', permission: 'quan-ly-thiet-bi' },
   { id: 'inventory', label: 'Tồn Kho', icon: Archive, href: '/inventory' },
   { id: 'history', label: 'Lịch Sử Kho', icon: History, href: '/history' },
   { id: 'account', label: 'Tài Khoản', icon: UserCog, href: '/account' },
@@ -44,8 +46,8 @@ export function Sidebar() {
   // State quản lý sidebar trên mobile (mở/đóng)
   const [isOpen, setIsOpen] = useState(false)
 
-  // State lưu tên người dùng đang đăng nhập
-  const [userName, setUserName] = useState('User')
+  // State lưu người dùng đang đăng nhập (để hiển thị tên + lọc menu theo quyền)
+  const [user, setUser] = useState<any>(null)
 
   // ------------------------------------------
   // Khi component mount: đọc thông tin user từ localStorage
@@ -53,13 +55,11 @@ export function Sidebar() {
   // ------------------------------------------
   useEffect(() => {
     const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        const parsed = JSON.parse(userData)
-        setUserName(parsed.name || parsed.username || 'User')
-      } catch {
-        setUserName('User')
-      }
+    if (!userData) return
+    try {
+      setUser(JSON.parse(userData))
+    } catch {
+      setUser(null)
     }
   }, [])
 
@@ -152,6 +152,9 @@ export function Sidebar() {
         <nav className="flex-1 p-3 flex flex-col gap-1.5 overflow-y-auto">
           {MENU_ITEMS.map((item) => {
             const Icon = item.icon
+            // Mục có yêu cầu quyền: admin luôn thấy, user thường cần đúng chức năng
+            const perms = Array.isArray(user?.chucNang) ? user.chucNang : [user?.chucNang || '']
+            if (item.permission && !(user?.isAdmin || perms.includes(item.permission))) return null
             // Kiểm tra menu hiện tại có đang active không
             const isActive = pathname === item.href
             return (
@@ -184,7 +187,7 @@ export function Sidebar() {
           <div className="px-3 py-3 bg-white/10 rounded-xl backdrop-blur-sm">
             <p className="text-xs text-white/60">Đăng nhập như</p>
             <p className="text-sm font-semibold text-white truncate" id="user-name">
-              {userName}
+              {user?.name || user?.username || 'User'}
             </p>
           </div>
           {/* Nút đăng xuất */}
