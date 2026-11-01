@@ -24,6 +24,7 @@ export const CHUC_NANG_LIST = [
   { id: 'kho-xay-dung', name: 'Kho Xây Dựng Cơ Bản', description: 'Có quyền truy cập kho xây dựng cơ bản' },
   { id: 'kho-phong-thi-nghiem', name: 'Kho Phòng Thí Nghiệm', description: 'Có quyền truy cập kho phòng thí nghiệm' },
   { id: 'kho-thuong-mai', name: 'Kho Thương Mại', description: 'Có quyền truy cập kho thương mại' },
+  { id: 'quan-ly-thiet-bi', name: 'Quản lý thiết bị', description: 'Có thể xem/thêm/sửa/xóa thiết bị' },
 ]
 
 // ------------------------------------------
@@ -67,6 +68,17 @@ export interface Product {
   locationImage: string   // URL ảnh vị trí (Supabase Storage)
   productImage: string    // URL ảnh sản phẩm (Supabase Storage)
   importDate: string
+}
+
+// ------------------------------------------
+// INTERFACE THIẾT BỊ
+// ------------------------------------------
+export interface Device {
+  id: number
+  deviceId: string
+  name: string
+  manufacturer: string
+  location: string
 }
 
 // ------------------------------------------

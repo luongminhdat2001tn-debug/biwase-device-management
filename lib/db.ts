@@ -8,6 +8,7 @@
 // CÁC BẢNG:
 //   - device_accounts: Tài khoản người dùng
 //   - products: Sản phẩm trong kho
+//   - devices: Thiết bị
 //   - history_log: Lịch sử thao tác kho
 //
 // STORAGE:
@@ -15,7 +16,7 @@
 // ==========================================
 
 import { supabase } from './supabase'
-import type { Account, Product, HistoryEntry } from './constants'
+import type { Account, Product, HistoryEntry, Device } from './constants'
 
 // ==========================================
 // DEVICE_ACCOUNTS - Tài khoản
@@ -216,6 +217,81 @@ export async function deleteProduct(id: number): Promise<boolean> {
 }
 
 // ==========================================
+// DEVICES - Thiết bị
+// ==========================================
+
+/** Chuẩn hóa mã thiết bị (bỏ trắng thừa, chữ hoa) */
+function normalizeDeviceId(deviceId: string): string {
+  return (deviceId || '').trim().toUpperCase()
+}
+
+/** Lấy tất cả thiết bị */
+export async function getDevices(): Promise<Device[]> {
+  const { data, error } = await supabase
+    .from('devices')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) { console.error('getDevices error:', error); return [] }
+  return (data || []).map(mapDeviceFromDB)
+}
+
+/** Tìm thiết bị theo mã (không phân biệt hoa/thường) */
+export async function findDeviceByDeviceId(deviceId: string): Promise<{ id: number } | null> {
+  const normalized = normalizeDeviceId(deviceId)
+  if (!normalized) return null
+  const { data, error } = await supabase
+    .from('devices')
+    .select('id')
+    .ilike('device_id', normalized)
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  return { id: (data as any).id as number }
+}
+
+/** Tạo thiết bị mới */
+export async function createDevice(device: Omit<Device, 'id'>): Promise<Device | null> {
+  const { data, error } = await supabase
+    .from('devices')
+    .insert({
+      device_id: normalizeDeviceId(device.deviceId),
+      name: device.name.trim(),
+      manufacturer: device.manufacturer.trim(),
+      location: device.location.trim(),
+    })
+    .select()
+    .single()
+  if (error) { console.error('createDevice error:', error); return null }
+  return mapDeviceFromDB(data)
+}
+
+/** Cập nhật thiết bị */
+export async function updateDevice(id: number, updates: Partial<Device>): Promise<boolean> {
+  const dbUpdates: any = {}
+  if (updates.deviceId !== undefined) dbUpdates.device_id = normalizeDeviceId(updates.deviceId)
+  if (updates.name !== undefined) dbUpdates.name = updates.name.trim()
+  if (updates.manufacturer !== undefined) dbUpdates.manufacturer = updates.manufacturer.trim()
+  if (updates.location !== undefined) dbUpdates.location = updates.location.trim()
+
+  const { error } = await supabase
+    .from('devices')
+    .update(dbUpdates)
+    .eq('id', id)
+  if (error) { console.error('updateDevice error:', error); return false }
+  return true
+}
+
+/** Xóa thiết bị (xóa cứng - bảng devices không có cột is_deleted) */
+export async function deleteDevice(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('devices')
+    .delete()
+    .eq('id', id)
+  if (error) { console.error('deleteDevice error:', error); return false }
+  return true
+}
+
+// ==========================================
 // HISTORY LOG - Lịch sử thao tác kho
 // ==========================================
 
@@ -325,6 +401,16 @@ function mapProductFromDB(row: any): Product {
     locationImage: row.location_image_url || '',
     productImage: row.product_image_url || '',
     importDate: row.import_date || '',
+  }
+}
+
+function mapDeviceFromDB(row: any): Device {
+  return {
+    id: row.id,
+    deviceId: row.device_id || '',
+    name: row.name || '',
+    manufacturer: row.manufacturer || '',
+    location: row.location || '',
   }
 }
 
