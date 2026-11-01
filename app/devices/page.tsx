@@ -203,14 +203,15 @@ export default function DevicesPage() {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Tên Thiết Bị</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Nhà Sản Xuất</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Vị Trí</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Ngày Tạo</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700">Thao Tác</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr><td colSpan={5} className="text-center py-8 text-gray-500">Đang tải...</td></tr>
+                        <tr><td colSpan={6} className="text-center py-8 text-gray-500">Đang tải...</td></tr>
                       ) : filteredDevices.length === 0 ? (
-                        <tr><td colSpan={5} className="text-center py-8 text-gray-500">Không có thiết bị nào</td></tr>
+                        <tr><td colSpan={6} className="text-center py-8 text-gray-500">Không có thiết bị nào</td></tr>
                       ) : (
                         filteredDevices.map((device) => (
                           <tr key={device.id} className="border-b hover:bg-gray-50">
@@ -220,6 +221,7 @@ export default function DevicesPage() {
                             <td className="py-3 px-4"><p className="font-medium text-gray-800">{device.name}</p></td>
                             <td className="py-3 px-4 text-gray-700">{device.manufacturer}</td>
                             <td className="py-3 px-4 text-gray-600">{device.location}</td>
+                            <td className="py-3 px-4 text-gray-600">{device.createdAt}</td>
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-center gap-1">
                                 <Button variant="ghost" size="sm" onClick={() => handleEdit(device)} className="h-8 w-8 p-0 hover:bg-blue-100 text-blue-600" title="Sửa">

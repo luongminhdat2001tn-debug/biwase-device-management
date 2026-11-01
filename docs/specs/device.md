@@ -37,6 +37,7 @@ warehouses: one flat device list with search, plus create, edit, and delete.
 | `name` | string | `name` | required |
 | `manufacturer` | string | `manufacturer` | required |
 | `location` | string | `location` | required |
+| `createdAt` | string | `created_at` | read-only, formatted `dd/mm/yyyy` via `toLocaleDateString('vi-VN')` |
 
 `lib/db.ts` gains, following the existing error-handling style (log and return
 `[]` / `null` / `false`):
@@ -44,7 +45,7 @@ warehouses: one flat device list with search, plus create, edit, and delete.
 - `getDevices(): Promise<Device[]>` — all rows ordered by `name`.
 - `findDeviceByDeviceId(deviceId: string): Promise<{ id: number } | null>` —
   case-insensitive exact match via `ilike`, `.limit(1).maybeSingle()`.
-- `createDevice(device: Omit<Device, 'id'>): Promise<Device | null>`
+- `createDevice(device: Omit<Device, 'id' | 'createdAt'>): Promise<Device | null>`
 - `updateDevice(id: number, updates: Partial<Device>): Promise<boolean>`
 - `deleteDevice(id: number): Promise<boolean>` — hard `delete()`.
 - `mapDeviceFromDB(row)` — `device_id` → `deviceId`.
@@ -57,7 +58,8 @@ warehouses: one flat device list with search, plus create, edit, and delete.
 - One `Card` (blue left border) titled "Danh Sách Thiết Bị" with a "Thêm Thiết
   Bị" button (permitted users only).
 - Search input filters on `deviceId` and `name`, case-insensitive, client-side.
-- Table columns: Mã thiết bị, Tên thiết bị, Nhà sản xuất, Vị trí, Thao tác.
+- Table columns: Mã thiết bị, Tên thiết bị, Nhà sản xuất, Vị trí, Ngày tạo (date only,
+  `dd/mm/yyyy`, not editable, not searched), Thao tác.
 - Row states: "Đang tải..." while loading, "Không có thiết bị nào" when empty.
 - Edit and delete icons per row, permitted users only.
 

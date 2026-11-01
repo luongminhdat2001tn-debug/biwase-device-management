@@ -79,6 +79,7 @@ export interface Device {
   name: string
   manufacturer: string
   location: string
+  createdAt: string      // Ngày tạo (định dạng dd/mm/yyyy)
 }
 
 // ------------------------------------------

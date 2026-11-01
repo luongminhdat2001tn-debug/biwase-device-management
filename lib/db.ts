@@ -251,8 +251,8 @@ export async function findDeviceByDeviceId(deviceId: string): Promise<{ id: numb
   return { id: (data as any).id as number }
 }
 
-/** Tạo thiết bị mới */
-export async function createDevice(device: Omit<Device, 'id'>): Promise<Device | null> {
+/** Tạo thiết bị mới (created_at do DB tự sinh) */
+export async function createDevice(device: Omit<Device, 'id' | 'createdAt'>): Promise<Device | null> {
   const { data, error } = await supabase
     .from('devices')
     .insert({
@@ -413,6 +413,7 @@ function mapDeviceFromDB(row: any): Device {
     name: row.name || '',
     manufacturer: row.manufacturer || '',
     location: row.location || '',
+    createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString('vi-VN') : '',
   }
 }
 
