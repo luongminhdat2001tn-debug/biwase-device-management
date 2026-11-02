@@ -25,6 +25,7 @@ export const CHUC_NANG_LIST = [
   { id: 'kho-phong-thi-nghiem', name: 'Kho Phòng Thí Nghiệm', description: 'Có quyền truy cập kho phòng thí nghiệm' },
   { id: 'kho-thuong-mai', name: 'Kho Thương Mại', description: 'Có quyền truy cập kho thương mại' },
   { id: 'quan-ly-thiet-bi', name: 'Quản lý thiết bị', description: 'Có thể xem/thêm/sửa/xóa thiết bị' },
+  { id: 'quan-ly-cong-viec', name: 'Quản lý công việc', description: 'Có thể xem/thêm/sửa/xóa công việc' },
 ]
 
 // ------------------------------------------
@@ -80,6 +81,21 @@ export interface Device {
   manufacturer: string
   location: string
   createdAt: string      // Ngày tạo (định dạng dd/mm/yyyy)
+}
+
+// ------------------------------------------
+// INTERFACE CÔNG VIỆC BẢO TRÌ
+// ------------------------------------------
+export interface Task {
+  id: number
+  deviceId: number
+  taskName: string
+  taskDescription: string
+  imageBefore: string
+  imageAfter: string
+  expiredAt: string
+  createdAt: string
+  updatedAt: string
 }
 
 // ------------------------------------------

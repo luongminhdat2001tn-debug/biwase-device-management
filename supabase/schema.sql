@@ -28,6 +28,27 @@ CREATE TABLE IF NOT EXISTS devices (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 3. Bảng công việc
+CREATE TABLE IF NOT EXISTS tasks (
+  id SERIAL PRIMARY KEY,
+  device_id SERIAL NOT NULL,
+  task_name VARCHAR(200) NOT NULL,
+  task_description TEXT NOT NULL,
+  image_before_maintenance_url TEXT NOT NULL,
+  image_after_maintenance_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  expired_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Xóa constraint cũ (nếu có) để chạy lại script không bị lỗi trùng tên
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS fk_tasks_device;
+-- ON DELETE CASCADE: xóa thiết bị thì các công việc liên quan cũng bị xóa
+ALTER TABLE tasks
+ADD CONSTRAINT fk_tasks_device
+FOREIGN KEY (device_id)
+REFERENCES devices(id) ON DELETE CASCADE;
+
 -- 3. Bảng lịch sử kho
 CREATE TABLE IF NOT EXISTS history_log (
   id SERIAL PRIMARY KEY,
@@ -47,7 +68,8 @@ CREATE TABLE IF NOT EXISTS history_log (
 -- ==========================================
 -- INDEX cho tìm kiếm nhanh
 -- ==========================================
-CREATE INDEX IF NOT EXISTS idx_products_warehouse ON products(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_devices ON devices(id);
+CREATE INDEX IF NOT EXISTS idx_tasks ON tasks(id);
 
 -- ==========================================
 -- RLS (Row Level Security) - Tắt cho demo
@@ -56,10 +78,12 @@ CREATE INDEX IF NOT EXISTS idx_products_warehouse ON products(warehouse_id);
 -- Production: nên bật RLS + policies phù hợp
 ALTER TABLE device_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 
 -- Policy cho phép anon key đọc/ghi tất cả (demo only)
 CREATE POLICY "Allow all for anon" ON device_accounts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON devices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON tasks FOR ALL USING (true) WITH CHECK (true);
 
 -- ==========================================
 -- DỮ LIỆU MẪU BAN ĐẦU

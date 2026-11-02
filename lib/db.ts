@@ -9,6 +9,7 @@
 //   - device_accounts: Tài khoản người dùng
 //   - products: Sản phẩm trong kho
 //   - devices: Thiết bị
+//   - tasks: Công việc bảo trì thiết bị
 //   - history_log: Lịch sử thao tác kho
 //
 // STORAGE:
@@ -16,7 +17,7 @@
 // ==========================================
 
 import { supabase } from './supabase'
-import type { Account, Product, HistoryEntry, Device } from './constants'
+import type { Account, Product, HistoryEntry, Device, Task } from './constants'
 
 // ==========================================
 // DEVICE_ACCOUNTS - Tài khoản
@@ -294,6 +295,67 @@ export async function deleteDevice(id: number): Promise<boolean> {
 }
 
 // ==========================================
+// TASKS - Công việc bảo trì thiết bị
+// ==========================================
+
+/** Lấy tất cả công việc (mới nhất trước) */
+export async function getTasks(): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) { console.error('getTasks error:', error); return [] }
+  return (data || []).map(mapTaskFromDB)
+}
+
+/** Tạo công việc mới (created_at/updated_at do DB tự sinh) */
+export async function createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task | null> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert({
+      device_id: task.deviceId,
+      task_name: task.taskName.trim(),
+      task_description: task.taskDescription.trim(),
+      image_before_maintenance_url: task.imageBefore,
+      // Ảnh sau có thể chưa có; cột cho phép NULL
+      image_after_maintenance_url: task.imageAfter || null,
+      expired_at: task.expiredAt,
+    })
+    .select()
+    .single()
+  if (error) { console.error('createTask error:', error); return null }
+  return mapTaskFromDB(data)
+}
+
+/** Cập nhật công việc (luôn cập nhật updated_at) */
+export async function updateTask(id: number, updates: Partial<Task>): Promise<boolean> {
+  const dbUpdates: any = { updated_at: new Date().toISOString() }
+  if (updates.deviceId !== undefined) dbUpdates.device_id = updates.deviceId
+  if (updates.taskName !== undefined) dbUpdates.task_name = updates.taskName.trim()
+  if (updates.taskDescription !== undefined) dbUpdates.task_description = updates.taskDescription.trim()
+  if (updates.imageBefore !== undefined) dbUpdates.image_before_maintenance_url = updates.imageBefore
+  if (updates.imageAfter !== undefined) dbUpdates.image_after_maintenance_url = updates.imageAfter || null
+  if (updates.expiredAt !== undefined) dbUpdates.expired_at = updates.expiredAt
+
+  const { error } = await supabase
+    .from('tasks')
+    .update(dbUpdates)
+    .eq('id', id)
+  if (error) { console.error('updateTask error:', error); return false }
+  return true
+}
+
+/** Xóa công việc (xóa cứng - bảng tasks không có cột is_deleted) */
+export async function deleteTask(id: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('id', id)
+  if (error) { console.error('deleteTask error:', error); return false }
+  return true
+}
+
+// ==========================================
 // HISTORY LOG - Lịch sử thao tác kho
 // ==========================================
 
@@ -414,6 +476,20 @@ function mapDeviceFromDB(row: any): Device {
     manufacturer: row.manufacturer || '',
     location: row.location || '',
     createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString('vi-VN') : '',
+  }
+}
+
+function mapTaskFromDB(row: any): Task {
+  return {
+    id: row.id,
+    deviceId: row.device_id,
+    taskName: row.task_name || '',
+    taskDescription: row.task_description || '',
+    imageBefore: row.image_before_maintenance_url || '',
+    imageAfter: row.image_after_maintenance_url || '',
+    expiredAt: row.expired_at || '',
+    createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString('vi-VN') : '',
+    updatedAt: row.updated_at ? new Date(row.updated_at).toLocaleDateString('vi-VN') : '',
   }
 }
 
