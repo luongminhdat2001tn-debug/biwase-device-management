@@ -21,7 +21,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { User, Package, Users, LogOut as LogOut2, Archive, History, UserCog, Menu, X, Droplets, HardDrive } from 'lucide-react'
+import { User, Package, Users, LogOut as LogOut2, Archive, History, UserCog, Menu, X, Droplets, HardDrive, ClipboardList } from 'lucide-react'
 import Image from 'next/image'
 
 // ------------------------------------------
@@ -34,6 +34,7 @@ const MENU_ITEMS: { id: string; label: string; icon: any; href: string; permissi
   { id: 'dashboard', label: 'Thông Tin Nhân Viên', icon: User, href: '/dashboard' },
   { id: 'warehouse', label: 'Quản Lý Kho', icon: Package, href: '/warehouse' },
   { id: 'devices', label: 'Quản Lý Thiết Bị', icon: HardDrive, href: '/devices', permission: 'quan-ly-thiet-bi' },
+  { id: 'tasks', label: 'Quản Lý Công Việc', icon: ClipboardList, href: '/tasks', permission: 'quan-ly-cong-viec' },
   { id: 'inventory', label: 'Tồn Kho', icon: Archive, href: '/inventory' },
   { id: 'history', label: 'Lịch Sử Kho', icon: History, href: '/history' },
   { id: 'account', label: 'Tài Khoản', icon: UserCog, href: '/account' },
