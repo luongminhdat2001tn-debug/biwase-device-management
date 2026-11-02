@@ -126,7 +126,7 @@ export default function DevicesPage() {
 
   // Xóa cứng thiết bị (bảng devices không có cột is_deleted)
   const handleDelete = async (device: Device) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa "${device.name}"?`)) return
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${device.name}"?\n\nLưu ý: Xóa thiết bị này, các mục công việc liên quan cũng sẽ bị xóa ở trang Quản Lý Thiết Bị`)) return
     if (!(await deleteDevice(device.id))) {
       alert('❌ Xóa thất bại! Vui lòng thử lại.')
       return

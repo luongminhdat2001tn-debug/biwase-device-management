@@ -79,7 +79,11 @@ with `*`.
 - Success reloads the list and closes the modal. Save button is disabled while a
   save is in flight.
 
-Delete asks `confirm()` then hard-deletes and reloads. A failed delete alerts.
+Delete asks `confirm()` with the message `Bạn có chắc chắn muốn xóa "<name>"?`
+followed by the warning `Lưu ý: Xóa thiết bị này, các mục công việc liên quan
+cũng sẽ bị xóa ở trang Quản Lý Thiết Bị`, then hard-deletes and reloads. The
+`tasks` FK uses `ON DELETE CASCADE`, so related jobs disappear with the device.
+A failed delete alerts.
 
 ## Verification
 
