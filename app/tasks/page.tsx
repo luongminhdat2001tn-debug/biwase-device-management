@@ -5,7 +5,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ClipboardList, Plus, Edit2, Trash2, Search, X, Save, AlertCircle } from 'lucide-react'
+import { ClipboardList, Plus, Edit2, Trash2, Search, X, Save, AlertCircle, Upload } from 'lucide-react'
 import type { Task, Device } from '@/lib/constants'
 import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage } from '@/lib/db'
 
@@ -26,6 +26,9 @@ export default function TasksPage() {
   // File ảnh mới chọn (null = giữ ảnh cũ khi sửa)
   const [imageBeforeFile, setImageBeforeFile] = useState<File | null>(null)
   const [imageAfterFile, setImageAfterFile] = useState<File | null>(null)
+  // Preview hiển thị: URL đã lưu hoặc data URL của file mới chọn
+  const [imageBeforePreview, setImageBeforePreview] = useState('')
+  const [imageAfterPreview, setImageAfterPreview] = useState('')
   // Lỗi đỏ từng ô (hiện sau khi bấm Lưu, tự xóa khi user sửa lại)
   const [formErrors, setFormErrors] = useState<Partial<Record<FormFields, string>>>({})
 
@@ -66,11 +69,44 @@ export default function TasksPage() {
     })
   }
 
+  // Chọn ảnh -> preview ngay bằng FileReader (chỉ upload khi bấm Lưu)
+  const handleBeforeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageBeforeFile(file)
+    clearFieldError('imageBefore')
+    const reader = new FileReader()
+    reader.onloadend = () => setImageBeforePreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleAfterImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageAfterFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => setImageAfterPreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const clearBeforeImage = () => {
+    setImageBeforeFile(null)
+    setImageBeforePreview('')
+    clearFieldError('imageBefore')
+  }
+
+  const clearAfterImage = () => {
+    setImageAfterFile(null)
+    setImageAfterPreview('')
+  }
+
   const handleAdd = () => {
     setEditingTask(null)
     setFormData({ deviceId: '', taskName: '', taskDescription: '', expiredAt: '' })
     setImageBeforeFile(null)
     setImageAfterFile(null)
+    setImageBeforePreview('')
+    setImageAfterPreview('')
     setFormErrors({})
     setIsSaving(false)
     setIsModalOpen(true)
@@ -87,6 +123,8 @@ export default function TasksPage() {
     })
     setImageBeforeFile(null)
     setImageAfterFile(null)
+    setImageBeforePreview(task.imageBefore)
+    setImageAfterPreview(task.imageAfter)
     setFormErrors({})
     setIsSaving(false)
     setIsModalOpen(true)
@@ -99,8 +137,8 @@ export default function TasksPage() {
     if (!formData.taskName.trim()) errors.taskName = 'Vui lòng nhập tên công việc'
     if (!formData.taskDescription.trim()) errors.taskDescription = 'Vui lòng nhập mô tả'
     if (!formData.expiredAt) errors.expiredAt = 'Vui lòng chọn hạn hoàn thành'
-    // Ảnh trước chỉ bắt buộc khi tạo mới; khi sửa giữ ảnh cũ nếu không chọn file
-    if (!editingTask && !imageBeforeFile) errors.imageBefore = 'Vui lòng chọn ảnh trước'
+    // Ảnh trước bắt buộc: phải có file mới hoặc ảnh đã lưu
+    if (!imageBeforeFile && !imageBeforePreview) errors.imageBefore = 'Vui lòng chọn ảnh trước'
     return errors
   }
 
@@ -129,8 +167,8 @@ export default function TasksPage() {
         taskName: formData.taskName.trim(),
         taskDescription: formData.taskDescription.trim(),
         expiredAt: formData.expiredAt,
-        imageBefore: uploadedBefore ?? editingTask?.imageBefore ?? '',
-        imageAfter: uploadedAfter ?? editingTask?.imageAfter ?? '',
+        imageBefore: uploadedBefore ?? imageBeforePreview,
+        imageAfter: uploadedAfter ?? imageAfterPreview,
       }
       const ok = editingTask ? await updateTask(editingTask.id, values) : !!(await createTask(values))
       if (!ok) {
@@ -245,7 +283,7 @@ export default function TasksPage() {
           {/* Modal Thêm/Sửa Công Việc */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-800">
                     {editingTask ? 'Sửa Công Việc' : 'Thêm Công Việc'}
@@ -255,7 +293,7 @@ export default function TasksPage() {
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Thiết bị */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Thiết bị *</label>
@@ -280,8 +318,25 @@ export default function TasksPage() {
                     )}
                   </div>
 
-                  {/* Tên công việc */}
+                  {/* Hạn hoàn thành */}
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hạn hoàn thành *</label>
+                    <input
+                      type="date"
+                      value={formData.expiredAt}
+                      onChange={(e) => {
+                        setFormData({ ...formData, expiredAt: e.target.value })
+                        clearFieldError('expiredAt')
+                      }}
+                      className={`w-full border-2 rounded-md p-2 ${formErrors.expiredAt ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                    />
+                    {formErrors.expiredAt && (
+                      <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.expiredAt}</p>
+                    )}
+                  </div>
+
+                  {/* Tên công việc */}
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tên công việc *</label>
                     <Input
                       value={formData.taskName}
@@ -297,7 +352,7 @@ export default function TasksPage() {
                   </div>
 
                   {/* Mô tả */}
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả *</label>
                     <textarea
                       value={formData.taskDescription}
@@ -314,19 +369,20 @@ export default function TasksPage() {
 
                   {/* Ảnh trước */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh trước *</label>
-                    {editingTask?.imageBefore && !imageBeforeFile && (
-                      <img src={editingTask.imageBefore} alt="Ảnh trước" className="h-16 w-16 object-cover rounded border mb-2" />
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        setImageBeforeFile(e.target.files?.[0] || null)
-                        clearFieldError('imageBefore')
-                      }}
-                      className={`w-full border-2 rounded-md p-2 ${formErrors.imageBefore ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh trước *</label>
+                    <div className="flex gap-4 items-start">
+                      <label className={`flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors flex-1 ${formErrors.imageBefore ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-blue-50 border-blue-300 hover:bg-blue-100'}`}>
+                        <Upload className={`w-5 h-5 ${formErrors.imageBefore ? 'text-red-500' : 'text-blue-500'}`} />
+                        <span className={`text-sm ${formErrors.imageBefore ? 'text-red-600' : 'text-blue-600'}`}>Upload ảnh trước</span>
+                        <input type="file" accept="image/*" onChange={handleBeforeImageUpload} className="hidden" />
+                      </label>
+                      {imageBeforePreview && (
+                        <div className="relative">
+                          <img src={imageBeforePreview} alt="Ảnh trước" className="w-24 h-24 object-cover rounded-lg border-2 border-blue-200" />
+                          <button onClick={clearBeforeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
+                        </div>
+                      )}
+                    </div>
                     {formErrors.imageBefore && (
                       <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.imageBefore}</p>
                     )}
@@ -334,33 +390,20 @@ export default function TasksPage() {
 
                   {/* Ảnh sau (không bắt buộc) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh sau</label>
-                    {editingTask?.imageAfter && !imageAfterFile && (
-                      <img src={editingTask.imageAfter} alt="Ảnh sau" className="h-16 w-16 object-cover rounded border mb-2" />
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setImageAfterFile(e.target.files?.[0] || null)}
-                      className="w-full border-2 border-gray-200 rounded-md p-2"
-                    />
-                  </div>
-
-                  {/* Hạn hoàn thành */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hạn hoàn thành *</label>
-                    <input
-                      type="date"
-                      value={formData.expiredAt}
-                      onChange={(e) => {
-                        setFormData({ ...formData, expiredAt: e.target.value })
-                        clearFieldError('expiredAt')
-                      }}
-                      className={`w-full border-2 rounded-md p-2 ${formErrors.expiredAt ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
-                    />
-                    {formErrors.expiredAt && (
-                      <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.expiredAt}</p>
-                    )}
+                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh sau</label>
+                    <div className="flex gap-4 items-start">
+                      <label className="flex items-center gap-2 px-4 py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex-1">
+                        <Upload className="w-5 h-5 text-gray-500" />
+                        <span className="text-sm text-gray-600">Upload ảnh sau</span>
+                        <input type="file" accept="image/*" onChange={handleAfterImageUpload} className="hidden" />
+                      </label>
+                      {imageAfterPreview && (
+                        <div className="relative">
+                          <img src={imageAfterPreview} alt="Ảnh sau" className="w-24 h-24 object-cover rounded-lg border-2" />
+                          <button onClick={clearAfterImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

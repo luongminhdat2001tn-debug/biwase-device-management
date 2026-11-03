@@ -96,17 +96,33 @@ other change. The user applies the SQL manually in the Supabase SQL Editor.
 
 ## Add/edit modal
 
-One shared modal; `editingTask === null` means add, otherwise edit. Fields in
-order:
+One shared modal; `editingTask === null` means add, otherwise edit. The modal
+uses the "Sửa Sản Phẩm Tồn Kho" pattern: `max-w-4xl`, body is
+`grid grid-cols-1 md:grid-cols-2 gap-4`.
 
-1. Thiết bị — `<select>` of `devices`, showing `Mã — Tên`, value `device.id`.
-   Required. If the devices list is empty, show a hint and block save.
-2. Tên công việc — text, required.
-3. Mô tả — textarea, required.
-4. Ảnh trước — file input, required on create. On edit, the stored image is
-   kept unless a new file is picked.
-5. Ảnh sau — file input, optional; same keep-or-replace behaviour.
-6. Hạn hoàn thành — date input (`yyyy-mm-dd`), required.
+Layout:
+
+| Row | Left | Right |
+| --- | --- | --- |
+| 1 | Thiết bị * (`<select>` of `devices`, showing `Mã — Tên`, value `device.id`) | Hạn hoàn thành * (date input `yyyy-mm-dd`) |
+| 2 | Tên công việc * (`md:col-span-2`) | |
+| 3 | Mô tả * (textarea, `md:col-span-2`, `min-h-24`) | |
+| 4 | 📷 Ảnh trước * | 📷 Ảnh sau |
+
+Required fields are labelled `*`. If the devices list is empty, show a hint and
+block save.
+
+Images use the warehouse modal's upload boxes: a dashed box with an `Upload`
+icon wrapping a hidden file input, an instant `FileReader` preview in a
+`w-24 h-24` thumbnail, and a red circular `X` to clear. New files are still
+uploaded only on save with `uploadImage(file, 'tasks')`, so cancelling leaves
+nothing behind.
+
+- Ảnh trước is required: clearing it and saving shows the inline
+  "Vui lòng chọn ảnh trước" error. Editing without picking a file keeps the
+  stored image (the preview starts from it).
+- Ảnh sau is optional: the `X` clears it and saving stores `NULL`/empty.
+- Picking a new file replaces the preview and, on save, the stored URL.
 
 Validation runs on save; missing fields get inline red messages (device-page
 style), cleared as the user types. Nothing is sent while invalid.
