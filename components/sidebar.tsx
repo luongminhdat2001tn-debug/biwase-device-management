@@ -36,7 +36,7 @@ const MENU_ITEMS: { id: string; label: string; icon: any; href: string; permissi
   { id: 'devices', label: 'Quản Lý Thiết Bị', icon: HardDrive, href: '/devices', permission: 'quan-ly-thiet-bi' },
   { id: 'tasks', label: 'Quản Lý Công Việc', icon: ClipboardList, href: '/tasks', permission: 'quan-ly-cong-viec' },
   { id: 'inventory', label: 'Tồn Kho', icon: Archive, href: '/inventory' },
-  { id: 'history', label: 'Lịch Sử Kho', icon: History, href: '/history' },
+  { id: 'history', label: 'Lịch Sử Công Việc', icon: History, href: '/history' },
   { id: 'account', label: 'Tài Khoản', icon: UserCog, href: '/account' },
 ]
 

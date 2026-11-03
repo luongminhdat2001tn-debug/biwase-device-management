@@ -10,7 +10,7 @@
 //   - products: Sản phẩm trong kho
 //   - devices: Thiết bị
 //   - tasks: Công việc bảo trì thiết bị
-//   - history_log: Lịch sử thao tác kho
+//   - task_history_log: Lịch sử thao tác thiết bị / công việc
 //
 // STORAGE:
 //   - Bucket 'images': Lưu ảnh sản phẩm + ảnh vị trí
@@ -355,36 +355,17 @@ export async function deleteTask(id: number): Promise<boolean> {
 }
 
 // ==========================================
-// HISTORY LOG - Lịch sử thao tác kho
+// HISTORY LOG - Lịch sử thao tác thiết bị / công việc
 // ==========================================
 
 /** Lấy toàn bộ lịch sử */
 export async function getHistoryLog(): Promise<HistoryEntry[]> {
   const { data, error } = await supabase
-    .from('history_log')
+    .from('task_history_log')
     .select('*')
     .order('created_at', { ascending: false })
   if (error) { console.error('getHistoryLog error:', error); return [] }
   return (data || []).map(mapHistoryFromDB)
-}
-
-/** Thêm bản ghi lịch sử */
-export async function addHistoryEntry(entry: Omit<HistoryEntry, 'id'>): Promise<boolean> {
-  const { error } = await supabase
-    .from('history_log')
-    .insert({
-      date: entry.date,
-      time: entry.time,
-      warehouse: entry.warehouse,
-      product_code: entry.productCode,
-      product_name: entry.productName,
-      user_name: entry.userName,
-      action: entry.action,
-      quantity: entry.quantity,
-      details: entry.details,
-    })
-  if (error) { console.error('addHistoryEntry error:', error); return false }
-  return true
 }
 
 // ==========================================
@@ -496,12 +477,9 @@ function mapHistoryFromDB(row: any): HistoryEntry {
   return {
     date: row.date || '',
     time: row.time || '',
-    warehouse: row.warehouse || '',
-    productCode: row.product_code || '',
-    productName: row.product_name || '',
+    taskName: row.task_name || '',
     userName: row.user_name || '',
     action: row.action || '',
-    quantity: row.quantity || 0,
     details: row.details || '',
   }
 }

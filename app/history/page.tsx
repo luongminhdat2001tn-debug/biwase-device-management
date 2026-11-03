@@ -1,47 +1,25 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { History, Calendar, Search, X, FileSpreadsheet, Printer } from 'lucide-react'
+import { History, Calendar, Search, X, FileSpreadsheet } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { type HistoryEntry, getAccessibleWarehouseIds } from '@/lib/constants'
-import { getHistoryLog, getAllProducts } from '@/lib/db'
-import type { RowData } from './preview-print-file'
+import { type HistoryEntry } from '@/lib/constants'
+import { getHistoryLog } from '@/lib/db'
 
 // Danh sách các chức năng để lọc
-const ACTION_OPTIONS = ['Tất cả', 'Nhập liệu', 'Xuất kho', 'Tồn kho']
-
-// Map ID kho -> tên hiển thị dài, phải khớp từng ký tự với giá trị
-// lưu trong history_log.warehouse (do trang warehouse/inventory ghi)
-const WAREHOUSE_NAMES: Record<string, string> = {
-  'kho-vat-tu': 'Kho Vật Tư Nhà Máy',
-  'kho-xay-dung': 'Kho Xây Dựng Cơ Bản',
-  'kho-phong-thi-nghiem': 'Kho Phòng Thí Nghiệm',
-  'kho-thuong-mai': 'Kho Thương Mại',
-}
-
-// Map tên kho dài -> MÃ KHO in trên phiếu xuất kho
-const WAREHOUSE_CODES: Record<string, string> = {
-  'Kho Vật Tư Nhà Máy': 'VT',
-  'Kho Xây Dựng Cơ Bản': 'XD',
-  'Kho Phòng Thí Nghiệm': 'TN',
-  'Kho Thương Mại': 'TM',
-}
+const ACTION_OPTIONS = ['Tất cả', 'Công việc', 'Thiết bị']
 
 export default function HistoryPage() {
   const [user, setUser] = useState<any>(null)
   const [historyLog, setHistoryLog] = useState<HistoryEntry[]>([])
-  // Map mã SP (lowercase) -> ĐVT để in phiếu (tra từ bảng products)
-  const [unitMap, setUnitMap] = useState<Record<string, string>>({})
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   // Bộ lọc mới
-  const [filterCode, setFilterCode] = useState('')
-  const [filterName, setFilterName] = useState('')
-  const [filterWarehouse, setFilterWarehouse] = useState('')
+  const [filterTaskName, setFilterTaskName] = useState('')
   const [filterAction, setFilterAction] = useState('Tất cả')
 
   useEffect(() => {
@@ -49,47 +27,10 @@ export default function HistoryPage() {
     if (!userData) { window.location.href = '/'; return }
     setUser(JSON.parse(userData))
     getHistoryLog().then(data => setHistoryLog(data))
-    // Tải ĐVT sản phẩm để map khi in phiếu (MÃ KHO tra từ WAREHOUSE_CODES)
-    // Key = "tên kho|mã hàng" vì mã hàng chỉ duy nhất trong từng kho
-    getAllProducts().then(grouped => {
-      const map: Record<string, string> = {}
-      Object.entries(grouped).forEach(([warehouseId, items]) => {
-        const warehouseName = WAREHOUSE_NAMES[warehouseId] || warehouseId
-        items.forEach(p => {
-          if (p.code) map[`${warehouseName}|${p.code.trim().toLowerCase()}`] = p.unit
-        })
-      })
-      setUnitMap(map)
-    })
   }, [])
 
-  // Danh sách kho mà tài khoản được phép truy cập (theo chucNang trong session)
-  const accessibleWarehouses = useMemo(() => {
-    const ids = getAccessibleWarehouseIds(user)
-    return ids.map((id) => ({ id, name: WAREHOUSE_NAMES[id] || id }))
-  }, [user])
-  // Tập tên kho được phép (để ẩn cứng dòng không có quyền)
-  const accessibleNames = useMemo(() => new Set(accessibleWarehouses.map((w) => w.name)), [accessibleWarehouses])
-  const hasAllWarehouses = accessibleWarehouses.length === 4
-  // Giá trị mặc định: đủ 4 kho hoặc 2-3 kho -> "Tất cả" (gộp trong phạm vi cho phép);
-  // 1 kho -> kho đó; 0 kho -> rỗng
-  const defaultWarehouseFilter = useMemo(() => {
-    if (accessibleWarehouses.length === 0) return ''
-    if (accessibleWarehouses.length === 1) return accessibleWarehouses[0].name
-    return 'Tất cả'
-  }, [accessibleWarehouses])
-
-  // Đồng bộ giá trị mặc định sau khi user load xong (chỉ 1 lần, không ghi đè lựa chọn tay)
-  const warehouseInitRef = useRef(false)
-  useEffect(() => {
-    if (user && !warehouseInitRef.current) {
-      warehouseInitRef.current = true
-      setFilterWarehouse(defaultWarehouseFilter)
-    }
-  }, [user, defaultWarehouseFilter])
-
   // ------------------------------------------
-  // Lọc kết hợp: ngày, mã SP, tên SP, chức năng
+  // Lọc kết hợp: ngày, tên công việc, chức năng
   // Dữ liệu từ Supabase đã sắp xếp mới nhất lên đầu
   // KHÔNG dùng .reverse() để giữ nguyên thứ tự
   // ------------------------------------------
@@ -130,15 +71,8 @@ export default function HistoryPage() {
       }
     }
 
-    // Lọc theo mã sản phẩm
-    if (filterCode && !entry.productCode.toLowerCase().includes(filterCode.toLowerCase())) return false
-
-    // Lọc theo tên sản phẩm
-    if (filterName && !entry.productName.toLowerCase().includes(filterName.toLowerCase())) return false
-
-    // Lọc theo kho: lớp 1 ẩn cứng kho không có quyền, lớp 2 theo dropdown (khớp chính xác)
-    if (!hasAllWarehouses && !accessibleNames.has(entry.warehouse)) return false
-    if (filterWarehouse && filterWarehouse !== 'Tất cả' && entry.warehouse !== filterWarehouse) return false
+    // Lọc theo tên công việc
+    if (filterTaskName && !entry.taskName.toLowerCase().includes(filterTaskName.toLowerCase())) return false
 
     // Lọc theo chức năng
     if (filterAction !== 'Tất cả' && entry.action !== filterAction) return false
@@ -146,14 +80,12 @@ export default function HistoryPage() {
     return true
   })
 
-  const hasFilter = dateFrom || dateTo || filterCode || filterName || filterWarehouse !== defaultWarehouseFilter || filterAction !== 'Tất cả'
+  const hasFilter = dateFrom || dateTo || filterTaskName || filterAction !== 'Tất cả'
 
   const clearAllFilters = () => {
     setDateFrom('')
     setDateTo('')
-    setFilterCode('')
-    setFilterName('')
-    setFilterWarehouse(defaultWarehouseFilter)
+    setFilterTaskName('')
     setFilterAction('Tất cả')
   }
 
@@ -163,11 +95,9 @@ export default function HistoryPage() {
       'Ngày': entry.date,
       'Thời gian': entry.time,
       'Họ và tên': entry.userName,
-      'Kho lưu': entry.warehouse,
-      'Mã SP': entry.productCode,
-      'Tên SP': entry.productName,
+      'Tên công việc': entry.taskName,
       'Chức năng': entry.action,
-      'Thông tin': entry.details || `${entry.action} ${entry.quantity} sản phẩm`,
+      'Thông tin': entry.details,
     }))
 
     const ws = XLSX.utils.json_to_sheet(data)
@@ -177,41 +107,22 @@ export default function HistoryPage() {
       { wch: 14 },
       { wch: 10 },
       { wch: 20 },
-      { wch: 16 },
-      { wch: 14 },
-      { wch: 24 },
+      { wch: 32 },
       { wch: 12 },
       { wch: 40 },
     ]
 
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử kho')
+    XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử công việc')
 
-    const fileName = `LichSuKho_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.xlsx`
+    const fileName = `LichSuCongViec_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.xlsx`
     XLSX.writeFile(wb, fileName)
-  }
-
-  // Mở phiếu xuất kho ở tab mới (dữ liệu = filteredHistory hiện tại)
-  // MÃ KHO tra từ WAREHOUSE_CODES theo tên kho, ĐVT tra từ products, NỘI DUNG = details
-  const handlePrintPhieu = () => {
-    const rows: RowData[] = filteredHistory.map((entry, index) => ({
-      id: index,
-      wh: WAREHOUSE_CODES[entry.warehouse] ?? entry.warehouse,
-      code: entry.productCode,
-      name: entry.productName,
-      unit: unitMap[`${entry.warehouse}|${(entry.productCode || '').trim().toLowerCase()}`] || '—',
-      qty: entry.quantity,
-      note: entry.details || `${entry.action} ${entry.quantity} sản phẩm`,
-    }))
-    sessionStorage.setItem('phieu-xuat-kho', JSON.stringify(rows))
-    window.open('/history/print', '_blank')
   }
 
   const getActionColor = (action: string) => {
     switch (action) {
-      case 'Nhập liệu': return 'bg-green-100 text-green-700'
-      case 'Xuất kho': return 'bg-orange-100 text-orange-700'
-      case 'Tồn kho': return 'bg-blue-100 text-blue-700'
+      case 'Công việc': return 'bg-blue-100 text-blue-700'
+      case 'Thiết bị': return 'bg-green-100 text-green-700'
       default: return 'bg-gray-100 text-gray-700'
     }
   }
@@ -223,7 +134,7 @@ export default function HistoryPage() {
       <Sidebar />
       <div className="flex-1 md:ml-64">
         <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-          <div className="mb-8"><h1 className="text-3xl font-bold text-gray-800">Lịch Sử Kho</h1></div>
+          <div className="mb-8"><h1 className="text-3xl font-bold text-gray-800">Lịch Sử Công Việc</h1></div>
 
           {/* Bộ lọc tổng hợp */}
           <Card className="mb-6">
@@ -245,51 +156,21 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {/* Hàng 2: Lọc theo mã, tên, chức năng */}
+                {/* Hàng 2: Lọc theo tên công việc, chức năng */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-gray-400" />
                     <span className="text-sm font-medium text-gray-700">Lọc thêm:</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 whitespace-nowrap">Mã SP:</label>
+                    <label className="text-sm text-gray-600 whitespace-nowrap">Tên công việc:</label>
                     <Input
-                      value={filterCode}
-                      onChange={(e) => setFilterCode(e.target.value)}
-                      placeholder="Nhập mã sản phẩm..."
-                      className="border-2 w-40"
+                      value={filterTaskName}
+                      onChange={(e) => setFilterTaskName(e.target.value)}
+                      placeholder="Nhập tên công việc..."
+                      className="border-2 w-56"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 whitespace-nowrap">Tên SP:</label>
-                    <Input
-                      value={filterName}
-                      onChange={(e) => setFilterName(e.target.value)}
-                      placeholder="Nhập tên sản phẩm..."
-                      className="border-2 w-48"
-                    />
-                  </div>                
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 whitespace-nowrap">Kho Lưu:</label>
-                    <select
-                      value={filterWarehouse}
-                      onChange={(e) => setFilterWarehouse(e.target.value)}
-                      className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    >
-                      {accessibleWarehouses.length === 0 ? (
-                        <option value="">Không có quyền</option>
-                      ) : (
-                        <>
-                          {accessibleWarehouses.length > 1 && (
-                            <option value="Tất cả">Tất cả</option>
-                          )}
-                          {accessibleWarehouses.map((w) => (
-                            <option key={w.id} value={w.name}>{w.name}</option>
-                          ))}
-                        </>
-                      )}
-                    </select>
-                  </div>                    
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-600 whitespace-nowrap">Chức năng:</label>
                     <select
@@ -322,9 +203,6 @@ export default function HistoryPage() {
                 </CardTitle>
                 {filteredHistory.length > 0 && (
                   <div className="flex gap-2">
-                    <Button onClick={handlePrintPhieu} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white cursor-pointer">
-                      <Printer className="w-4 h-4" /> Xuất Phiếu Kho
-                    </Button>
                     <Button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer">
                       <FileSpreadsheet className="w-4 h-4" /> Xuất Excel
                     </Button>
@@ -340,9 +218,7 @@ export default function HistoryPage() {
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 whitespace-nowrap">Ngày/tháng/năm</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700">Thời gian</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[140px]">Họ và tên</th>
-                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Kho lưu</th>
-                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Mã SP</th>
-                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Tên SP</th>
+                      <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[200px]">Tên công việc</th>
                       <th className="text-center py-3 px-3 font-semibold text-gray-700">Chức năng</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[200px]">Thông tin chức năng</th>
                     </tr>
@@ -350,7 +226,7 @@ export default function HistoryPage() {
                   <tbody>
                     {filteredHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="text-center py-12 text-gray-500">
+                        <td colSpan={6} className="text-center py-12 text-gray-500">
                           <History className="w-16 h-16 mx-auto mb-2 text-gray-300" />
                           <p>{hasFilter ? 'Không có bản ghi nào phù hợp với bộ lọc' : 'Chưa có lịch sử hoạt động'}</p>
                         </td>
@@ -362,14 +238,12 @@ export default function HistoryPage() {
                           <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{entry.date}</td>
                           <td className="py-3 px-3 text-gray-600">{entry.time}</td>
                           <td className="py-3 px-3 text-gray-700 font-medium">{entry.userName}</td>
-                          <td className="py-3 px-3 text-gray-700">{entry.warehouse}</td>
-                          <td className="py-3 px-3"><span className="font-mono font-medium text-blue-600">{entry.productCode}</span></td>
-                          <td className="py-3 px-3 font-medium text-gray-800">{entry.productName}</td>
+                          <td className="py-3 px-3 font-medium text-gray-800">{entry.taskName}</td>
                           <td className="py-3 px-3 text-center">
                             <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${getActionColor(entry.action)}`}>{entry.action}</span>
                           </td>
                           <td className="py-3 px-3 text-gray-600 text-sm">
-                            {entry.details || `${entry.action} ${entry.quantity} sản phẩm`}
+                            {entry.details}
                           </td>
                         </tr>
                       ))

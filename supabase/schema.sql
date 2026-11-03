@@ -41,25 +41,14 @@ CREATE TABLE IF NOT EXISTS tasks (
   expired_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
--- Xóa constraint cũ (nếu có) để chạy lại script không bị lỗi trùng tên
-ALTER TABLE tasks DROP CONSTRAINT IF EXISTS fk_tasks_device;
--- ON DELETE CASCADE: xóa thiết bị thì các công việc liên quan cũng bị xóa
-ALTER TABLE tasks
-ADD CONSTRAINT fk_tasks_device
-FOREIGN KEY (device_id)
-REFERENCES devices(id) ON DELETE CASCADE;
-
 -- 3. Bảng lịch sử kho
-CREATE TABLE IF NOT EXISTS history_log (
+CREATE TABLE IF NOT EXISTS task_history_log (
   id SERIAL PRIMARY KEY,
   date VARCHAR(20),
   time VARCHAR(20),
-  warehouse VARCHAR(100),
-  product_code VARCHAR(50),
-  product_name VARCHAR(200),
+  task_name VARCHAR(200),
   user_name VARCHAR(100),
   action VARCHAR(50),
-  quantity INTEGER DEFAULT 0,
   details TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -70,6 +59,7 @@ CREATE TABLE IF NOT EXISTS history_log (
 -- ==========================================
 CREATE INDEX IF NOT EXISTS idx_devices ON devices(id);
 CREATE INDEX IF NOT EXISTS idx_tasks ON tasks(id);
+CREATE INDEX IF NOT EXISTS idx_task_history_log ON task_history_log(id);
 
 -- ==========================================
 -- RLS (Row Level Security) - Tắt cho demo
@@ -79,11 +69,13 @@ CREATE INDEX IF NOT EXISTS idx_tasks ON tasks(id);
 ALTER TABLE device_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_history_log ENABLE ROW LEVEL SECURITY;
 
 -- Policy cho phép anon key đọc/ghi tất cả (demo only)
 CREATE POLICY "Allow all for anon" ON device_accounts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON devices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON task_history_log FOR ALL USING (true) WITH CHECK (true);
 
 -- ==========================================
 -- DỮ LIỆU MẪU BAN ĐẦU

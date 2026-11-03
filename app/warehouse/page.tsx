@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Package, Plus, Edit2, Trash2, Search, X, Save, Warehouse, Factory, ShoppingBag, Building, Upload, LogIn, LogOut, FlaskConical, RefreshCw } from 'lucide-react'
 import { type Product, canAccessWarehouse } from '@/lib/constants'
-import { getProductsByWarehouse, createProduct, updateProduct, deleteProduct, addHistoryEntry, uploadImage, findProductByCodeInWarehouse, normalizeProductCode, findProductByNameInWarehouse } from '@/lib/db'
+import { getProductsByWarehouse, createProduct, updateProduct, deleteProduct, uploadImage, findProductByCodeInWarehouse, normalizeProductCode, findProductByNameInWarehouse } from '@/lib/db'
 
 const WAREHOUSES = [
   { id: 'kho-vat-tu', name: 'Kho Vật Tư Nhà Máy', icon: Factory, color: 'blue' },
@@ -476,17 +476,6 @@ export default function WarehousePage() {
     if (!exportReason.trim()) { setExportReasonError('Vui lòng nhập lý do xuất kho!'); return }
     setIsSaving(true)
     await updateProduct(foundProduct.id, { quantity: foundProduct.quantity - exportQuantity })
-    await addHistoryEntry({
-      date: new Date().toLocaleDateString('vi-VN'),
-      time: new Date().toLocaleTimeString('vi-VN'),
-      warehouse: currentWarehouse?.name || '',
-      productCode: foundProduct.code,
-      productName: foundProduct.name,
-      userName: user?.name || user?.username || '',
-      action: 'Xuất kho',
-      quantity: exportQuantity,
-      details: `Xuất ${exportQuantity} ${foundProduct.unit} — Lý do: ${exportReason.trim()}`,
-    })
     alert(`Đã xuất ${exportQuantity} ${foundProduct.unit} ${foundProduct.name}`)
     setIsModalOpen(false)
     setIsSaving(false)
@@ -500,17 +489,6 @@ export default function WarehousePage() {
     setIsSaving(true)
     const newQty = addMoreProduct.quantity + addMoreQuantity
     await updateProduct(addMoreProduct.id, { quantity: newQty })
-    await addHistoryEntry({
-      date: new Date().toLocaleDateString('vi-VN'),
-      time: new Date().toLocaleTimeString('vi-VN'),
-      warehouse: currentWarehouse?.name || '',
-      productCode: addMoreProduct.code,
-      productName: addMoreProduct.name,
-      userName: user?.name || user?.username || '',
-      action: 'Nhập liệu',
-      quantity: addMoreQuantity,
-      details: `Nhập kho ${addMoreQuantity} ${addMoreProduct.unit} (tồn trước: ${addMoreProduct.quantity}, tồn sau: ${newQty})`,
-    })
     alert(`Đã nhập kho ${addMoreQuantity} ${addMoreProduct.unit} vào ${addMoreProduct.name}. Tồn kho mới: ${newQty}`)
     setIsModalOpen(false)
     setIsSaving(false)
@@ -592,18 +570,6 @@ export default function WarehousePage() {
       if (url) locationImageUrl = url
     }
 
-    // Ghi lại chi tiết thay đổi
-    const changes: string[] = []
-    const old = products.find(p => p.id === editingProduct.id)
-    if (old) {
-      if (old.weight !== editFormData.weight || (old.weightUnit || 'kg') !== editFormData.weightUnit) changes.push(`Khối lượng: ${old.weight} - ${old.weightUnit || 'kg'} → ${editFormData.weight} - ${editFormData.weightUnit}`)
-      if (old.name !== editFormData.name) changes.push(`Tên: ${old.name} → ${editFormData.name}`)
-      if (old.categoryName !== editFormData.categoryName) changes.push(`Danh mục: ${old.categoryName || '(trống)'} → ${editFormData.categoryName || '(trống)'}`)
-      if (old.location !== editFormData.location) changes.push(`Vị trí: ${old.location} → ${editFormData.location}`)
-      if (old.locationImage !== locationImageUrl) changes.push('Ảnh vị trí: đã cập nhật')
-      if ((old.productImage || '') !== productImageUrl) changes.push('Ảnh sản phẩm: đã cập nhật')
-    }
-
     // Cập nhật DB (giữ nguyên quantity)
     const ok = await updateProduct(editingProduct.id, {
       ...editFormData,
@@ -618,40 +584,16 @@ export default function WarehousePage() {
       return
     }
 
-    // Log lịch sử
-    await addHistoryEntry({
-      date: new Date().toLocaleDateString('vi-VN'),
-      time: new Date().toLocaleTimeString('vi-VN'),
-      warehouse: currentWarehouse?.name || '',
-      productCode: editFormData.code,
-      productName: editFormData.name,
-      userName: user?.name || user?.username || '',
-      action: 'Tồn kho',
-      quantity: editFormData.quantity,
-      details: changes.length > 0 ? changes.join(', ') : 'Không có thay đổi',
-    })
-
     setIsEditSaving(false)
     await loadProducts(selectedWarehouse)
     setIsEditModalOpen(false)
     alert('✅ Cập nhật sản phẩm thành công!')
   }
 
-  // Xóa sản phẩm (soft delete) + ghi lịch sử
+  // Xóa sản phẩm (soft delete)
   const handleDeleteProduct = async (product: Product) => {
     if (confirm(`Bạn có chắc chắn muốn xóa "${product.name}" khỏi tồn kho?`)) {
       await deleteProduct(product.id)
-      await addHistoryEntry({
-        date: new Date().toLocaleDateString('vi-VN'),
-        time: new Date().toLocaleTimeString('vi-VN'),
-        warehouse: currentWarehouse?.name || '',
-        productCode: product.code,
-        productName: product.name,
-        userName: user?.name || user?.username || '',
-        action: 'Xóa sản phẩm',
-        quantity: product.quantity,
-        details: `Xóa ${product.quantity} ${product.unit}`,
-      })
       await loadProducts(selectedWarehouse)
     }
   }
@@ -702,18 +644,6 @@ export default function WarehousePage() {
       warehouseId: selectedWarehouse,
     })
 
-    // Log lịch sử nhập liệu
-    await addHistoryEntry({
-      date: new Date().toLocaleDateString('vi-VN'),
-      time: new Date().toLocaleTimeString('vi-VN'),
-      warehouse: currentWarehouse?.name || '',
-      productCode: formData.code,
-      productName: formData.name,
-      userName: user?.name || user?.username || '',
-      action: 'Nhập liệu',
-      quantity: Number(formData.quantity) || 0,
-      details: `Nhập ${formData.quantity} ${formData.unit}`,
-    })
     setIsSaving(false)
     setIsModalOpen(false)
     await loadProducts(selectedWarehouse)

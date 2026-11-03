@@ -104,12 +104,9 @@ export interface Task {
 export interface HistoryEntry {
   date: string
   time: string
-  warehouse: string
-  productCode: string
-  productName: string
+  taskName: string
   userName: string
-  action: string            // 'Nhập liệu' | 'Xuất kho' | 'Tồn kho'
-  quantity: number
+  action: string            // 'Thiết bị' | 'Công việc'
   details: string           // Chi tiết thao tác
 }
 
