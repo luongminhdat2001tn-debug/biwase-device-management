@@ -48,7 +48,7 @@ Each line is verified in Task 5's manual checklist.
   - `deleteTask(id: number): Promise<boolean>`
   - Permission id `'quan-ly-cong-viec'` present in `CHUC_NANG_LIST`
 
-- [ ] **Step 1: Make the tasks FK cascade**
+- [x] **Step 1: Make the tasks FK cascade**
 
 Replace the current `ALTER TABLE tasks ADD CONSTRAINT fk_tasks_device ...` block with:
 
@@ -62,7 +62,7 @@ REFERENCES devices(id) ON DELETE CASCADE;
 
 Leave the rest of the file untouched. Remind the user to run this block in the Supabase SQL Editor (the app cannot apply it).
 
-- [ ] **Step 2: Add the `Task` interface to `lib/constants.ts`**
+- [x] **Step 2: Add the `Task` interface to `lib/constants.ts`**
 
 Insert after the `Device` interface, with a Vietnamese section comment:
 
@@ -80,7 +80,7 @@ export interface Task {
 }
 ```
 
-- [ ] **Step 3: Add the permission to `CHUC_NANG_LIST`**
+- [x] **Step 3: Add the permission to `CHUC_NANG_LIST`**
 
 Append after the `quan-ly-thiet-bi` entry (keep commas correct):
 
@@ -88,7 +88,7 @@ Append after the `quan-ly-thiet-bi` entry (keep commas correct):
   { id: 'quan-ly-cong-viec', name: 'Quản lý công việc', description: 'Có thể xem/thêm/sửa/xóa công việc' },
 ```
 
-- [ ] **Step 4: Add task functions to `lib/db.ts`**
+- [x] **Step 4: Add task functions to `lib/db.ts`**
 
 Add before the `HISTORY LOG` section. Each function logs via `console.error` and returns the same failure value the existing functions use (`[]`, `null`, `false`):
 
@@ -97,7 +97,7 @@ Add before the `HISTORY LOG` section. Each function logs via `console.error` and
 - `updateTask` — build a snake_case object only for defined keys (`deviceId`→`device_id`, `taskName`→`task_name`, `taskDescription`→`task_description`, `imageBefore`→`image_before_maintenance_url`, `imageAfter`→`image_after_maintenance_url` with `|| null`, `expiredAt`→`expired_at`), always set `updated_at: new Date().toISOString()`, `.update(...).eq('id', id)`, return `true`/`false`.
 - `deleteTask` — `.delete().eq('id', id)`, return `true`/`false`.
 
-- [ ] **Step 5: Add `mapTaskFromDB`**
+- [x] **Step 5: Add `mapTaskFromDB`**
 
 Next to `mapDeviceFromDB`:
 
@@ -119,12 +119,12 @@ function mapTaskFromDB(row: any): Task {
 
 Update the file's header comment list of tables to include `tasks`.
 
-- [ ] **Step 6: Verify the build**
+- [x] **Step 6: Verify the build**
 
 Run: `npm run build`
 Expected: build completes with no error. (TS errors are ignored by config; re-read the new signatures against the `Task` interface.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add supabase/schema.sql lib/constants.ts lib/db.ts
@@ -143,7 +143,7 @@ git commit -m "feat: add task type, permission, data layer, and cascade FK"
 
 **Permission rule (used in the gate):** `const canManage = !!user && (user.isAdmin || (Array.isArray(user.chucNang) ? user.chucNang : [user.chucNang || '']).includes('quan-ly-cong-viec'))`.
 
-- [ ] **Step 1: Scaffold the page shell, session, load, and list**
+- [x] **Step 1: Scaffold the page shell, session, load, and list**
 
 `'use client'`. Copy the outer structure and styling from `app/devices/page.tsx` (lines 155-196): `<Sidebar />`, `flex-1 md:ml-64`, `p-4 md:p-8 bg-gray-50 min-h-screen`, `h1` "Quản Lý Công Việc", one `Card` with `border-l-4 border-l-blue-600`.
 
@@ -160,7 +160,7 @@ Render, inside the card:
 - When `user` is set and `!canManage`, render a permission `Card` with `AlertCircle` and text "Bạn không có quyền truy cập trang này. Vui lòng liên hệ quản trị viên." instead of the list card.
 - Return "Loading..." while `!user`.
 
-- [ ] **Step 2: Add the shared add/edit modal**
+- [x] **Step 2: Add the shared add/edit modal**
 
 One modal rendered when `isModalOpen`. Title `editingTask ? 'Sửa Công Việc' : 'Thêm Công Việc'`; `X` close button.
 
@@ -179,7 +179,7 @@ All labels except Ảnh sau suffixed `*`. Each field gets the red border/backgro
 
 `validate()` returns errors for empty `deviceId` ("Vui lòng chọn thiết bị"), `taskName` ("Vui lòng nhập tên công việc"), `taskDescription` ("Vui lòng nhập mô tả"), `expiredAt` ("Vui lòng chọn hạn hoàn thành"), plus `imageBefore` ("Vui lòng chọn ảnh trước") only when `!editingTask && !imageBeforeFile`.
 
-- [ ] **Step 3: Save with image upload**
+- [x] **Step 3: Save with image upload**
 
 `handleSave`:
 1. If `isSaving`, return. Run `validate()`; if any errors, `setFormErrors(errors)` and return.
@@ -192,16 +192,16 @@ All labels except Ảnh sau suffixed `*`. Each field gets the red border/backgro
 
 Footer: "Hủy" `Button variant="outline"` closing the modal; save `Button` labelled `editingTask ? 'Cập Nhật' : 'Tạo Mới'`, `disabled={isSaving}`.
 
-- [ ] **Step 4: Add delete**
+- [x] **Step 4: Add delete**
 
 `handleDelete(task)`: `confirm(\`Bạn có chắc chắn muốn xóa công việc "${task.taskName}"?\`)`; on yes `const ok = await deleteTask(task.id)`; if `!ok` alert `'❌ Xóa thất bại! Vui lòng thử lại.'`; else reload the tasks list.
 
-- [ ] **Step 5: Verify the build**
+- [x] **Step 5: Verify the build**
 
 Run: `npm run build`
 Expected: completes with no error and lists `/tasks` in the route output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/tasks/page.tsx
@@ -218,7 +218,7 @@ git commit -m "feat: add task management page"
 **Interfaces:**
 - Consumes: permission id `'quan-ly-cong-viec'` from Task 1; the existing `permission?` filter already handles visibility.
 
-- [ ] **Step 1: Add the menu entry**
+- [x] **Step 1: Add the menu entry**
 
 Add `ClipboardList` to the `lucide-react` import, then insert after the `devices` entry:
 
@@ -226,12 +226,12 @@ Add `ClipboardList` to the `lucide-react` import, then insert after the `devices
   { id: 'tasks', label: 'Quản Lý Công Việc', icon: ClipboardList, href: '/tasks', permission: 'quan-ly-cong-viec' },
 ```
 
-- [ ] **Step 2: Verify the build**
+- [x] **Step 2: Verify the build**
 
 Run: `npm run build`
 Expected: completes with no error.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/sidebar.tsx
@@ -246,7 +246,7 @@ git commit -m "feat: add task management menu item"
 - Modify: `app/devices/page.tsx` (`handleDelete`, lines 127-135)
 - Modify: `docs/specs/device.md` (Delete paragraph, line 82)
 
-- [ ] **Step 1: Extend the confirm message**
+- [x] **Step 1: Extend the confirm message**
 
 Replace the confirm string in `handleDelete` with:
 
@@ -256,16 +256,16 @@ if (!confirm(`Bạn có chắc chắn muốn xóa "${device.name}"?\n\nLưu ý: 
 
 No other change: the cascade FK from Task 1 does the work.
 
-- [ ] **Step 2: Update the device spec**
+- [x] **Step 2: Update the device spec**
 
 Change the Delete paragraph to state that the confirm also warns related tasks will be deleted, and that the `tasks` FK cascades.
 
-- [ ] **Step 3: Verify the build**
+- [x] **Step 3: Verify the build**
 
 Run: `npm run build`
 Expected: completes with no error.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/devices/page.tsx docs/specs/device.md
@@ -303,11 +303,11 @@ Expected: sidebar shows "Quản Lý Công Việc".
 - Sign in as a non-admin account without `quan-ly-cong-viec`: menu item absent; `http://localhost:3000/tasks` shows the permission message with no buttons.
 - Temporarily remove a task's device row in the Supabase table editor (FK off in a scratch DB) and reload `/tasks`: the Thiết bị column shows "—" (Review Focus 5).
 
-- [ ] **Step 4: Update the spec if behavior changed**
+- [x] **Step 4: Update the spec if behavior changed**
 
 If any implemented behavior differs from `docs/specs/task.md` or `docs/specs/device.md` (labels, validation messages, permission rule, delete behavior), edit the spec to match, then note the change in the commit message.
 
-- [ ] **Step 5: Commit any spec change**
+- [x] **Step 5: Commit any spec change**
 
 ```bash
 git add docs/specs/task.md docs/specs/device.md
@@ -315,3 +315,12 @@ git commit -m "docs: sync task and device specs with implementation"
 ```
 
 (Skip the commit when nothing changed.)
+
+## Execution notes
+
+- Ruling: implemented on `main`, no worktree — this repo's history commits features directly to `main`; cost if wrong: reset the commits before pushing.
+- Ruling: no TDD run — the repo has no test runner and the approved plan verifies with `npm run build` + the manual checklist; `npm run build` passed and `/tasks` is in the route output.
+- Read-only Supabase check: every `tasks` column is selectable and the `tasks → devices` relationship resolves with the anon client. The cascade behavior itself is not observable from the anon client.
+- Ruling: the Thao tác column is always rendered (`colSpan` 5) — users without permission see the permission card instead of the list, so the plan's "4 without actions" case never occurs.
+- Ruling: final review was a self-review — the subagent dispatch failed on the free usage limit.
+- Task 5 Steps 1–3 stay unchecked: they need the user's SQL Editor and a signed-in browser.
