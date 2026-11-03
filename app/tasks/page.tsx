@@ -265,7 +265,7 @@ export default function TasksPage() {
                         setFormData({ ...formData, deviceId: e.target.value })
                         clearFieldError('deviceId')
                       }}
-                      className={`w-full border-2 rounded-md p-2 bg-white ${formErrors.deviceId ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                      className={`w-full border-2 rounded-md p-2 ${formErrors.deviceId ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white'}`}
                     >
                       <option value="">Chọn thiết bị</option>
                       {devices.map((d) => (
