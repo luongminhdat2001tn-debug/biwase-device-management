@@ -35,8 +35,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   task_name VARCHAR(200) NOT NULL,
   task_description TEXT NOT NULL,
   remaining_day INTEGER NOT NULL,
-  image_before_maintenance_url TEXT NOT NULL,
-  image_after_maintenance_url TEXT,
+  maintained_image_url TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   expired_at TIMESTAMP WITH TIME ZONE NOT NULL

@@ -317,9 +317,7 @@ export async function createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedA
       task_name: task.taskName.trim(),
       task_description: task.taskDescription.trim(),
       remaining_day: task.remainingDay,
-      image_before_maintenance_url: task.imageBefore,
-      // Ảnh sau có thể chưa có; cột cho phép NULL
-      image_after_maintenance_url: task.imageAfter || null,
+      maintained_image_url: task.maintainedImageUrl,
       expired_at: task.expiredAt,
     })
     .select()
@@ -335,8 +333,7 @@ export async function updateTask(id: number, updates: Partial<Task>): Promise<bo
   if (updates.taskName !== undefined) dbUpdates.task_name = updates.taskName.trim()
   if (updates.taskDescription !== undefined) dbUpdates.task_description = updates.taskDescription.trim()
   if (updates.remainingDay !== undefined) dbUpdates.remaining_day = updates.remainingDay
-  if (updates.imageBefore !== undefined) dbUpdates.image_before_maintenance_url = updates.imageBefore
-  if (updates.imageAfter !== undefined) dbUpdates.image_after_maintenance_url = updates.imageAfter || null
+  if (updates.maintainedImageUrl !== undefined) dbUpdates.maintained_image_url = updates.maintainedImageUrl
   if (updates.expiredAt !== undefined) dbUpdates.expired_at = updates.expiredAt
 
   const { error } = await supabase
@@ -488,8 +485,7 @@ function mapTaskFromDB(row: any): Task {
     taskName: row.task_name || '',
     taskDescription: row.task_description || '',
     remainingDay: row.remaining_day ?? 0,
-    imageBefore: row.image_before_maintenance_url || '',
-    imageAfter: row.image_after_maintenance_url || '',
+    maintainedImageUrl: row.maintained_image_url || '',
     expiredAt: row.expired_at || '',
     createdAt: row.created_at ? new Date(row.created_at).toLocaleDateString('vi-VN') : '',
     updatedAt: row.updated_at ? new Date(row.updated_at).toLocaleDateString('vi-VN') : '',

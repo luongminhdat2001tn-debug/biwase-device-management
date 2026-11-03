@@ -9,7 +9,7 @@ import { ClipboardList, Plus, Edit2, Trash2, Search, X, Save, AlertCircle, Uploa
 import type { Task, Device } from '@/lib/constants'
 import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage } from '@/lib/db'
 
-type FormFields = 'deviceId' | 'taskName' | 'taskDescription' | 'expiredAt' | 'imageBefore' | 'imageAfter'
+type FormFields = 'deviceId' | 'taskName' | 'taskDescription' | 'expiredAt' | 'maintainedImageUrl'
 
 // Ngày hôm nay dạng yyyy-mm-dd theo giờ máy
 // (không dùng toISOString vì sẽ lệch ngày khi múi giờ dương vào sáng sớm)
@@ -35,11 +35,9 @@ export default function TasksPage() {
   // Form dùng chung cho thêm mới và sửa (deviceId giữ dạng string cho autocomplete)
   const [formData, setFormData] = useState({ deviceId: '', taskName: '', taskDescription: '', expiredAt: '' })
   // File ảnh mới chọn (null = giữ ảnh cũ khi sửa)
-  const [imageBeforeFile, setImageBeforeFile] = useState<File | null>(null)
-  const [imageAfterFile, setImageAfterFile] = useState<File | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   // Preview hiển thị: URL đã lưu hoặc data URL của file mới chọn
-  const [imageBeforePreview, setImageBeforePreview] = useState('')
-  const [imageAfterPreview, setImageAfterPreview] = useState('')
+  const [imagePreview, setImagePreview] = useState('')
   // Ô autocomplete thiết bị: text đang gõ + trạng thái mở danh sách
   const [deviceQuery, setDeviceQuery] = useState('')
   const [isDeviceListOpen, setIsDeviceListOpen] = useState(false)
@@ -94,34 +92,20 @@ export default function TasksPage() {
   }
 
   // Chọn ảnh -> preview ngay bằng FileReader (chỉ upload khi bấm Lưu)
-  const handleBeforeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setImageBeforeFile(file)
-    clearFieldError('imageBefore')
+    setImageFile(file)
+    clearFieldError('maintainedImageUrl')
     const reader = new FileReader()
-    reader.onloadend = () => setImageBeforePreview(reader.result as string)
+    reader.onloadend = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
   }
 
-  const handleAfterImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageAfterFile(file)
-    const reader = new FileReader()
-    reader.onloadend = () => setImageAfterPreview(reader.result as string)
-    reader.readAsDataURL(file)
-  }
-
-  const clearBeforeImage = () => {
-    setImageBeforeFile(null)
-    setImageBeforePreview('')
-    clearFieldError('imageBefore')
-  }
-
-  const clearAfterImage = () => {
-    setImageAfterFile(null)
-    setImageAfterPreview('')
+  const clearImage = () => {
+    setImageFile(null)
+    setImagePreview('')
+    clearFieldError('maintainedImageUrl')
   }
 
   // Chọn thiết bị từ danh sách gợi ý
@@ -137,10 +121,8 @@ export default function TasksPage() {
     setFormData({ deviceId: '', taskName: '', taskDescription: '', expiredAt: '' })
     setDeviceQuery('')
     setIsDeviceListOpen(false)
-    setImageBeforeFile(null)
-    setImageAfterFile(null)
-    setImageBeforePreview('')
-    setImageAfterPreview('')
+    setImageFile(null)
+    setImagePreview('')
     setFormErrors({})
     setIsSaving(false)
     setIsModalOpen(true)
@@ -158,10 +140,8 @@ export default function TasksPage() {
     const device = devices.find((d) => d.id === task.deviceId)
     setDeviceQuery(device ? deviceLabel(device) : '')
     setIsDeviceListOpen(false)
-    setImageBeforeFile(null)
-    setImageAfterFile(null)
-    setImageBeforePreview(task.imageBefore)
-    setImageAfterPreview(task.imageAfter)
+    setImageFile(null)
+    setImagePreview(task.maintainedImageUrl)
     setFormErrors({})
     setIsSaving(false)
     setIsModalOpen(true)
@@ -175,8 +155,8 @@ export default function TasksPage() {
     if (!formData.taskDescription.trim()) errors.taskDescription = 'Vui lòng nhập mô tả'
     if (!formData.expiredAt) errors.expiredAt = 'Vui lòng chọn hạn hoàn thành'
     else if (formData.expiredAt < todayISO()) errors.expiredAt = 'Hạn hoàn thành không được trước hôm nay'
-    // Ảnh trước bắt buộc: phải có file mới hoặc ảnh đã lưu
-    if (!imageBeforeFile && !imageBeforePreview) errors.imageBefore = 'Vui lòng chọn ảnh trước'
+    // Ảnh bảo trì bắt buộc: phải có file mới hoặc ảnh đã lưu
+    if (!imageFile && !imagePreview) errors.maintainedImageUrl = 'Vui lòng chọn ảnh bảo trì'
     return errors
   }
 
@@ -192,10 +172,9 @@ export default function TasksPage() {
     setIsSaving(true)
 
     try {
-      const uploadedBefore = imageBeforeFile ? await uploadImage(imageBeforeFile, 'tasks') : null
-      const uploadedAfter = imageAfterFile ? await uploadImage(imageAfterFile, 'tasks') : null
+      const uploadedImage = imageFile ? await uploadImage(imageFile, 'tasks') : null
       // Có chọn file mà upload lỗi thì dừng, không ghi DB
-      if ((imageBeforeFile && !uploadedBefore) || (imageAfterFile && !uploadedAfter)) {
+      if (imageFile && !uploadedImage) {
         alert('❌ Upload ảnh thất bại! Vui lòng thử lại.')
         return
       }
@@ -206,8 +185,7 @@ export default function TasksPage() {
         taskDescription: formData.taskDescription.trim(),
         remainingDay: remainingDays ?? 0,
         expiredAt: formData.expiredAt,
-        imageBefore: uploadedBefore ?? imageBeforePreview,
-        imageAfter: uploadedAfter ?? imageAfterPreview,
+        maintainedImageUrl: uploadedImage ?? imagePreview,
       }
       const ok = editingTask ? await updateTask(editingTask.id, values) : !!(await createTask(values))
       if (!ok) {
@@ -445,43 +423,25 @@ export default function TasksPage() {
                     )}
                   </div>
 
-                  {/*Ảnh trước khi bảo trì */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">📷Ảnh trước khi bảo trì *</label>
+                  {/* Ảnh bảo trì */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh bảo trì *</label>
                     <div className="flex gap-4 items-start">
-                      <label className={`flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors flex-1 ${formErrors.imageBefore ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-blue-50 border-blue-300 hover:bg-blue-100'}`}>
-                        <Upload className={`w-5 h-5 ${formErrors.imageBefore ? 'text-red-500' : 'text-blue-500'}`} />
-                        <span className={`text-sm ${formErrors.imageBefore ? 'text-red-600' : 'text-blue-600'}`}>Upload ảnh trước khi bảo trì</span>
-                        <input type="file" accept="image/*" onChange={handleBeforeImageUpload} className="hidden" />
+                      <label className={`flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors flex-1 ${formErrors.maintainedImageUrl ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-blue-50 border-blue-300 hover:bg-blue-100'}`}>
+                        <Upload className={`w-5 h-5 ${formErrors.maintainedImageUrl ? 'text-red-500' : 'text-blue-500'}`} />
+                        <span className={`text-sm ${formErrors.maintainedImageUrl ? 'text-red-600' : 'text-blue-600'}`}>Upload ảnh bảo trì</span>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                       </label>
-                      {imageBeforePreview && (
+                      {imagePreview && (
                         <div className="relative">
-                          <img src={imageBeforePreview} alt="Ảnh trước khi bảo trì" className="w-24 h-24 object-cover rounded-lg border-2 border-blue-200" />
-                          <button onClick={clearBeforeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
+                          <img src={imagePreview} alt="Ảnh bảo trì" className="w-24 h-24 object-cover rounded-lg border-2 border-blue-200" />
+                          <button onClick={clearImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
                         </div>
                       )}
                     </div>
-                    {formErrors.imageBefore && (
-                      <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.imageBefore}</p>
+                    {formErrors.maintainedImageUrl && (
+                      <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.maintainedImageUrl}</p>
                     )}
-                  </div>
-
-                  {/* Ảnh sau khi bảo trì (không bắt buộc) */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh sau khi bảo trì</label>
-                    <div className="flex gap-4 items-start">
-                      <label className="flex items-center gap-2 px-4 py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex-1">
-                        <Upload className="w-5 h-5 text-gray-500" />
-                        <span className="text-sm text-gray-600">Upload ảnh sau khi bảo trì</span>
-                        <input type="file" accept="image/*" onChange={handleAfterImageUpload} className="hidden" />
-                      </label>
-                      {imageAfterPreview && (
-                        <div className="relative">
-                          <img src={imageAfterPreview} alt="Ảnh sau khi bảo trì" className="w-24 h-24 object-cover rounded-lg border-2" />
-                          <button onClick={clearAfterImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
 

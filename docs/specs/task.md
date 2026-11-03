@@ -40,8 +40,7 @@ device from the `devices` table.
 | `taskName` | string | `task_name` | required |
 | `taskDescription` | string | `task_description` | required |
 | `remainingDay` | number | `remaining_day` | derived from `expired_at` and today on save; read-only in the UI |
-| `imageBefore` | string | `image_before_maintenance_url` | required on create |
-| `imageAfter` | string | `image_after_maintenance_url` | `''` until supplied |
+| `maintainedImageUrl` | string | `maintained_image_url` | required |
 | `expiredAt` | string | `expired_at` | ISO date; edited as `yyyy-mm-dd` |
 | `createdAt` | string | `created_at` | read-only, formatted `dd/mm/yyyy` |
 | `updatedAt` | string | `updated_at` | read-only, set on update |
@@ -78,8 +77,19 @@ ALTER TABLE tasks
 
 This replaces the current non-cascading `ADD CONSTRAINT` block in
 `supabase/schema.sql` (kept re-runnable with `DROP CONSTRAINT IF EXISTS`).
-`image_after_maintenance_url` is already nullable in the current schema; no
-other change. The user applies the SQL manually in the Supabase SQL Editor.
+`tasks` has one maintenance image, `maintained_image_url TEXT NOT NULL`. An
+existing database needs (the `DEFAULT ''` only lets the NOT NULL column be
+added to rows that already exist):
+
+```sql
+ALTER TABLE tasks
+  ADD COLUMN IF NOT EXISTS maintained_image_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE tasks
+  DROP COLUMN IF EXISTS image_before_maintenance_url,
+  DROP COLUMN IF EXISTS image_after_maintenance_url;
+```
+
+The user applies the SQL manually in the Supabase SQL Editor.
 
 ## Page (`app/tasks/page.tsx`)
 
@@ -108,7 +118,7 @@ Layout:
 | 1 | Thiết bị * (autocomplete input + dropdown) | Hạn hoàn thành * (date input `yyyy-mm-dd`, `min` = today) |
 | 2 | Tên công việc * (`md:col-span-2`) | |
 | 3 | Mô tả * (textarea, `md:col-span-2`, `min-h-24`) | |
-| 4 | 📷 Ảnh trước * | 📷 Ảnh sau |
+| 4 | 📷 Ảnh bảo trì * (`md:col-span-2`) | |
 
 **Thiết bị autocomplete:** the input filters `devices` by `deviceId` or `name`,
 case-insensitive, and shows a dropdown of `Mã — Tên` options. Picking an option
@@ -130,16 +140,14 @@ from the selected date and today (both local dates): today = 0, tomorrow = 1,
 Required fields are labelled `*`. If the devices list is empty, show a hint and
 block save.
 
-Images use the warehouse modal's upload boxes: a dashed box with an `Upload`
-icon wrapping a hidden file input, an instant `FileReader` preview in a
-`w-24 h-24` thumbnail, and a red circular `X` to clear. New files are still
-uploaded only on save with `uploadImage(file, 'tasks')`, so cancelling leaves
-nothing behind.
+Images use the warehouse modal's upload box: a dashed box with an `Upload` icon
+wrapping a hidden file input, an instant `FileReader` preview in a `w-24 h-24`
+thumbnail, and a red circular `X` to clear. New files are uploaded only on save
+with `uploadImage(file, 'tasks')`, so cancelling leaves nothing behind.
 
-- Ảnh trước is required: clearing it and saving shows the inline
-  "Vui lòng chọn ảnh trước" error. Editing without picking a file keeps the
+- Ảnh bảo trì is required: clearing it and saving shows the inline
+  "Vui lòng chọn ảnh bảo trì" error. Editing without picking a file keeps the
   stored image (the preview starts from it).
-- Ảnh sau is optional: the `X` clears it and saving stores `NULL`/empty.
 - Picking a new file replaces the preview and, on save, the stored URL.
 
 Validation runs on save; missing fields get inline red messages (device-page
@@ -170,12 +178,12 @@ Delete section of `docs/specs/device.md` is updated to match.
 The repo has no test/lint/typecheck setup (`next build` ignores TS errors), so:
 
 1. `npm run build` succeeds.
-2. Manual checklist: create (all required fields, with ảnh trước + deadline);
-   validation blocks empty fields; edit prefills and keeps images unless
-   replaced; add ảnh sau on edit; search by device name and task name; delete
-   task; delete a device that has tasks (warning shows, tasks disappear);
-   user without `quan-ly-cong-viec` sees no menu item and is blocked on direct
-   navigation; admin sees and can perform all.
+2. Manual checklist: create (all required fields, with ảnh bảo trì + deadline);
+   validation blocks empty fields; edit prefills and keeps the image unless
+   replaced; search by device name and task name; delete task; delete a device
+   that has tasks (warning shows, tasks disappear); user without
+   `quan-ly-cong-viec` sees no menu item and is blocked on direct navigation;
+   admin sees and can perform all.
 
 ## Accepted risks
 

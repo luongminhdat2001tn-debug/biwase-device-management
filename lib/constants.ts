@@ -92,8 +92,7 @@ export interface Task {
   taskName: string
   taskDescription: string
   remainingDay: number
-  imageBefore: string
-  imageAfter: string
+  maintainedImageUrl: string
   expiredAt: string
   createdAt: string
   updatedAt: string
