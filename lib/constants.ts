@@ -91,6 +91,7 @@ export interface Task {
   deviceId: number
   taskName: string
   taskDescription: string
+  remainingDay: number
   imageBefore: string
   imageAfter: string
   expiredAt: string

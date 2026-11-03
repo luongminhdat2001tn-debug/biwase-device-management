@@ -39,6 +39,7 @@ device from the `devices` table.
 | `deviceId` | number | `device_id` | FK to `devices.id`, required |
 | `taskName` | string | `task_name` | required |
 | `taskDescription` | string | `task_description` | required |
+| `remainingDay` | number | `remaining_day` | derived from `expired_at` and today on save; read-only in the UI |
 | `imageBefore` | string | `image_before_maintenance_url` | required on create |
 | `imageAfter` | string | `image_after_maintenance_url` | `''` until supplied |
 | `expiredAt` | string | `expired_at` | ISO date; edited as `yyyy-mm-dd` |
@@ -104,10 +105,27 @@ Layout:
 
 | Row | Left | Right |
 | --- | --- | --- |
-| 1 | Thiết bị * (`<select>` of `devices`, showing `Mã — Tên`, value `device.id`) | Hạn hoàn thành * (date input `yyyy-mm-dd`) |
+| 1 | Thiết bị * (autocomplete input + dropdown) | Hạn hoàn thành * (date input `yyyy-mm-dd`, `min` = today) |
 | 2 | Tên công việc * (`md:col-span-2`) | |
 | 3 | Mô tả * (textarea, `md:col-span-2`, `min-h-24`) | |
 | 4 | 📷 Ảnh trước * | 📷 Ảnh sau |
+
+**Thiết bị autocomplete:** the input filters `devices` by `deviceId` or `name`,
+case-insensitive, and shows a dropdown of `Mã — Tên` options. Picking an option
+stores `device.id` and fills the input with the label; typing after a selection
+clears `deviceId` so the user must pick again. Focusing a selected/empty input
+shows all devices. No match shows "Không tìm thấy thiết bị". Save requires a
+picked device ("Vui lòng chọn thiết bị từ danh sách"). Options are buttons
+(Tab/Enter accessible) inside a `role="listbox"`.
+
+**Hạn hoàn thành:** `min` is today's local date, and save rejects an earlier
+date with "Hạn hoàn thành không được trước hôm nay" (`min` alone is not enforced
+by every browser).
+
+**Số ngày còn lại:** a disabled input under Hạn hoàn thành. It is computed live
+from the selected date and today (both local dates): today = 0, tomorrow = 1,
++7 days = 7; "—" when no date is picked. On save the value is written to
+`remaining_day`. On edit it is recomputed from the stored `expired_at`.
 
 Required fields are labelled `*`. If the devices list is empty, show a hint and
 block save.

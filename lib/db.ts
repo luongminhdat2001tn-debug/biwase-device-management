@@ -316,6 +316,7 @@ export async function createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedA
       device_id: task.deviceId,
       task_name: task.taskName.trim(),
       task_description: task.taskDescription.trim(),
+      remaining_day: task.remainingDay,
       image_before_maintenance_url: task.imageBefore,
       // Ảnh sau có thể chưa có; cột cho phép NULL
       image_after_maintenance_url: task.imageAfter || null,
@@ -333,6 +334,7 @@ export async function updateTask(id: number, updates: Partial<Task>): Promise<bo
   if (updates.deviceId !== undefined) dbUpdates.device_id = updates.deviceId
   if (updates.taskName !== undefined) dbUpdates.task_name = updates.taskName.trim()
   if (updates.taskDescription !== undefined) dbUpdates.task_description = updates.taskDescription.trim()
+  if (updates.remainingDay !== undefined) dbUpdates.remaining_day = updates.remainingDay
   if (updates.imageBefore !== undefined) dbUpdates.image_before_maintenance_url = updates.imageBefore
   if (updates.imageAfter !== undefined) dbUpdates.image_after_maintenance_url = updates.imageAfter || null
   if (updates.expiredAt !== undefined) dbUpdates.expired_at = updates.expiredAt
@@ -485,6 +487,7 @@ function mapTaskFromDB(row: any): Task {
     deviceId: row.device_id,
     taskName: row.task_name || '',
     taskDescription: row.task_description || '',
+    remainingDay: row.remaining_day ?? 0,
     imageBefore: row.image_before_maintenance_url || '',
     imageAfter: row.image_after_maintenance_url || '',
     expiredAt: row.expired_at || '',

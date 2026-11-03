@@ -11,6 +11,17 @@ import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage }
 
 type FormFields = 'deviceId' | 'taskName' | 'taskDescription' | 'expiredAt' | 'imageBefore' | 'imageAfter'
 
+// Ngày hôm nay dạng yyyy-mm-dd theo giờ máy
+// (không dùng toISOString vì sẽ lệch ngày khi múi giờ dương vào sáng sớm)
+const todayISO = () => new Date().toLocaleDateString('en-CA')
+
+// Số ngày còn lại từ hôm nay đến hạn (0 = hôm nay, 1 = ngày mai)
+const calcRemainingDays = (date: string) => {
+  if (!date) return null
+  const diff = new Date(`${date}T00:00:00`).getTime() - new Date(`${todayISO()}T00:00:00`).getTime()
+  return Math.round(diff / 86400000)
+}
+
 export default function TasksPage() {
   const [user, setUser] = useState<any>(null)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -21,7 +32,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  // Form dùng chung cho thêm mới và sửa (deviceId giữ dạng string cho <select>)
+  // Form dùng chung cho thêm mới và sửa (deviceId giữ dạng string cho autocomplete)
   const [formData, setFormData] = useState({ deviceId: '', taskName: '', taskDescription: '', expiredAt: '' })
   // File ảnh mới chọn (null = giữ ảnh cũ khi sửa)
   const [imageBeforeFile, setImageBeforeFile] = useState<File | null>(null)
@@ -29,6 +40,9 @@ export default function TasksPage() {
   // Preview hiển thị: URL đã lưu hoặc data URL của file mới chọn
   const [imageBeforePreview, setImageBeforePreview] = useState('')
   const [imageAfterPreview, setImageAfterPreview] = useState('')
+  // Ô autocomplete thiết bị: text đang gõ + trạng thái mở danh sách
+  const [deviceQuery, setDeviceQuery] = useState('')
+  const [isDeviceListOpen, setIsDeviceListOpen] = useState(false)
   // Lỗi đỏ từng ô (hiện sau khi bấm Lưu, tự xóa khi user sửa lại)
   const [formErrors, setFormErrors] = useState<Partial<Record<FormFields, string>>>({})
 
@@ -53,6 +67,16 @@ export default function TasksPage() {
 
   // Tên thiết bị lấy từ danh sách đã tải; thiết bị không còn thì hiện "—"
   const deviceName = (id: number) => devices.find((d) => d.id === id)?.name || '—'
+
+  // Autocomplete thiết bị: lọc theo mã hoặc tên, đang chọn thì focus hiện tất cả
+  const deviceLabel = (d: Device) => `${d.deviceId} — ${d.name}`
+  const selectedDevice = devices.find((d) => String(d.id) === formData.deviceId)
+  const deviceSearch = selectedDevice && deviceQuery === deviceLabel(selectedDevice) ? '' : deviceQuery
+  const filteredDevices = devices.filter((d) => {
+    const q = deviceSearch.trim().toLowerCase()
+    return !q || d.deviceId.toLowerCase().includes(q) || d.name.toLowerCase().includes(q)
+  })
+  const remainingDays = calcRemainingDays(formData.expiredAt)
 
   const keyword = searchTerm.trim().toLowerCase()
   const filteredTasks = tasks.filter(
@@ -100,9 +124,19 @@ export default function TasksPage() {
     setImageAfterPreview('')
   }
 
+  // Chọn thiết bị từ danh sách gợi ý
+  const selectDevice = (d: Device) => {
+    setFormData((prev) => ({ ...prev, deviceId: String(d.id) }))
+    setDeviceQuery(deviceLabel(d))
+    clearFieldError('deviceId')
+    setIsDeviceListOpen(false)
+  }
+
   const handleAdd = () => {
     setEditingTask(null)
     setFormData({ deviceId: '', taskName: '', taskDescription: '', expiredAt: '' })
+    setDeviceQuery('')
+    setIsDeviceListOpen(false)
     setImageBeforeFile(null)
     setImageAfterFile(null)
     setImageBeforePreview('')
@@ -121,6 +155,9 @@ export default function TasksPage() {
       // <input type="date"> cần yyyy-mm-dd
       expiredAt: task.expiredAt.slice(0, 10),
     })
+    const device = devices.find((d) => d.id === task.deviceId)
+    setDeviceQuery(device ? deviceLabel(device) : '')
+    setIsDeviceListOpen(false)
     setImageBeforeFile(null)
     setImageAfterFile(null)
     setImageBeforePreview(task.imageBefore)
@@ -133,10 +170,11 @@ export default function TasksPage() {
   // Kiểm tra các trường bắt buộc, trả về object lỗi (rỗng = hợp lệ)
   const validate = () => {
     const errors: typeof formErrors = {}
-    if (!formData.deviceId) errors.deviceId = 'Vui lòng chọn thiết bị'
+    if (!formData.deviceId) errors.deviceId = 'Vui lòng chọn thiết bị từ danh sách'
     if (!formData.taskName.trim()) errors.taskName = 'Vui lòng nhập tên công việc'
     if (!formData.taskDescription.trim()) errors.taskDescription = 'Vui lòng nhập mô tả'
     if (!formData.expiredAt) errors.expiredAt = 'Vui lòng chọn hạn hoàn thành'
+    else if (formData.expiredAt < todayISO()) errors.expiredAt = 'Hạn hoàn thành không được trước hôm nay'
     // Ảnh trước bắt buộc: phải có file mới hoặc ảnh đã lưu
     if (!imageBeforeFile && !imageBeforePreview) errors.imageBefore = 'Vui lòng chọn ảnh trước'
     return errors
@@ -166,6 +204,7 @@ export default function TasksPage() {
         deviceId: Number(formData.deviceId),
         taskName: formData.taskName.trim(),
         taskDescription: formData.taskDescription.trim(),
+        remainingDay: remainingDays ?? 0,
         expiredAt: formData.expiredAt,
         imageBefore: uploadedBefore ?? imageBeforePreview,
         imageAfter: uploadedAfter ?? imageAfterPreview,
@@ -294,22 +333,54 @@ export default function TasksPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Thiết bị */}
+                  {/* Thiết bị - autocomplete */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Thiết bị *</label>
-                    <select
-                      value={formData.deviceId}
-                      onChange={(e) => {
-                        setFormData({ ...formData, deviceId: e.target.value })
-                        clearFieldError('deviceId')
+                    <div
+                      className="relative"
+                      // Chỉ đóng khi focus rời khỏi cả ô nhập + danh sách (Tab vào option vẫn được)
+                      onBlur={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDeviceListOpen(false)
                       }}
-                      className={`w-full border-2 rounded-md p-2 ${formErrors.deviceId ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white'}`}
                     >
-                      <option value="">Chọn thiết bị</option>
-                      {devices.map((d) => (
-                        <option key={d.id} value={String(d.id)}>{d.deviceId} — {d.name}</option>
-                      ))}
-                    </select>
+                      <Input
+                        value={deviceQuery}
+                        onChange={(e) => {
+                          setDeviceQuery(e.target.value)
+                          // Gõ lại sau khi đã chọn -> bắt buộc chọn lại từ danh sách
+                          if (formData.deviceId) setFormData({ ...formData, deviceId: '' })
+                          clearFieldError('deviceId')
+                          setIsDeviceListOpen(true)
+                        }}
+                        onFocus={() => setIsDeviceListOpen(true)}
+                        placeholder="Tìm theo mã hoặc tên thiết bị..."
+                        role="combobox"
+                        aria-expanded={isDeviceListOpen}
+                        aria-controls="device-options"
+                        aria-autocomplete="list"
+                        className={`border-2 ${formErrors.deviceId ? 'border-red-500 bg-red-50 focus:ring-red-400' : ''}`}
+                      />
+                      {isDeviceListOpen && (
+                        <div id="device-options" role="listbox" className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border-2 border-gray-200 rounded-md shadow-lg">
+                          {filteredDevices.length === 0 ? (
+                            <p className="px-3 py-2 text-sm text-gray-500">Không tìm thấy thiết bị</p>
+                          ) : (
+                            filteredDevices.map((d) => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                role="option"
+                                aria-selected={String(d.id) === formData.deviceId}
+                                onClick={() => selectDevice(d)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${String(d.id) === formData.deviceId ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}`}
+                              >
+                                {deviceLabel(d)}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {devices.length === 0 && (
                       <p className="text-amber-600 text-xs mt-1">Chưa có thiết bị nào. Vui lòng thêm thiết bị trước.</p>
                     )}
@@ -323,6 +394,7 @@ export default function TasksPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hạn hoàn thành *</label>
                     <input
                       type="date"
+                      min={todayISO()}
                       value={formData.expiredAt}
                       onChange={(e) => {
                         setFormData({ ...formData, expiredAt: e.target.value })
@@ -333,6 +405,12 @@ export default function TasksPage() {
                     {formErrors.expiredAt && (
                       <p className="text-red-600 text-xs mt-1 font-medium">⚠️ {formErrors.expiredAt}</p>
                     )}
+                    <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">Số ngày còn lại</label>
+                    <Input
+                      value={remainingDays === null ? '—' : String(remainingDays)}
+                      disabled
+                      className="border-2 bg-gray-100 cursor-not-allowed"
+                    />
                   </div>
 
                   {/* Tên công việc */}
@@ -367,18 +445,18 @@ export default function TasksPage() {
                     )}
                   </div>
 
-                  {/* Ảnh trước */}
+                  {/*Ảnh trước khi bảo trì */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh trước *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">📷Ảnh trước khi bảo trì *</label>
                     <div className="flex gap-4 items-start">
                       <label className={`flex items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors flex-1 ${formErrors.imageBefore ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-blue-50 border-blue-300 hover:bg-blue-100'}`}>
                         <Upload className={`w-5 h-5 ${formErrors.imageBefore ? 'text-red-500' : 'text-blue-500'}`} />
-                        <span className={`text-sm ${formErrors.imageBefore ? 'text-red-600' : 'text-blue-600'}`}>Upload ảnh trước</span>
+                        <span className={`text-sm ${formErrors.imageBefore ? 'text-red-600' : 'text-blue-600'}`}>Upload ảnh trước khi bảo trì</span>
                         <input type="file" accept="image/*" onChange={handleBeforeImageUpload} className="hidden" />
                       </label>
                       {imageBeforePreview && (
                         <div className="relative">
-                          <img src={imageBeforePreview} alt="Ảnh trước" className="w-24 h-24 object-cover rounded-lg border-2 border-blue-200" />
+                          <img src={imageBeforePreview} alt="Ảnh trước khi bảo trì" className="w-24 h-24 object-cover rounded-lg border-2 border-blue-200" />
                           <button onClick={clearBeforeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
                         </div>
                       )}
@@ -388,18 +466,18 @@ export default function TasksPage() {
                     )}
                   </div>
 
-                  {/* Ảnh sau (không bắt buộc) */}
+                  {/* Ảnh sau khi bảo trì (không bắt buộc) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh sau</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">📷 Ảnh sau khi bảo trì</label>
                     <div className="flex gap-4 items-start">
                       <label className="flex items-center gap-2 px-4 py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors flex-1">
                         <Upload className="w-5 h-5 text-gray-500" />
-                        <span className="text-sm text-gray-600">Upload ảnh sau</span>
+                        <span className="text-sm text-gray-600">Upload ảnh sau khi bảo trì</span>
                         <input type="file" accept="image/*" onChange={handleAfterImageUpload} className="hidden" />
                       </label>
                       {imageAfterPreview && (
                         <div className="relative">
-                          <img src={imageAfterPreview} alt="Ảnh sau" className="w-24 h-24 object-cover rounded-lg border-2" />
+                          <img src={imageAfterPreview} alt="Ảnh sau khi bảo trì" className="w-24 h-24 object-cover rounded-lg border-2" />
                           <button onClick={clearAfterImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"><X className="w-4 h-4" /></button>
                         </div>
                       )}
