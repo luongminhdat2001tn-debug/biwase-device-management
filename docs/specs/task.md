@@ -14,7 +14,7 @@ device from the `devices` table.
 - No separate detail page: the add/edit modal is where images and the deadline
   are shown.
 - No sorting controls; the list is ordered by `created_at` descending.
-- No cleanup of uploaded images from Storage when a task is deleted.
+- No image history: replacing or deleting an image removes the old file.
 
 ## Access control
 
@@ -148,7 +148,10 @@ with `uploadImage(file, 'tasks')`, so cancelling leaves nothing behind.
 - Ảnh bảo trì is required: clearing it and saving shows the inline
   "Vui lòng chọn ảnh bảo trì" error. Editing without picking a file keeps the
   stored image (the preview starts from it).
-- Picking a new file replaces the preview and, on save, the stored URL.
+- Picking a new file replaces the preview and, on save, the stored URL. After
+  the DB write succeeds, the previous file is deleted from Storage with
+  `deleteImage` (best-effort, console only). If the DB write fails, the newly
+  uploaded file is deleted instead, so no orphan is left.
 
 Validation runs on save; missing fields get inline red messages (device-page
 style), cleared as the user types. Nothing is sent while invalid.
@@ -160,6 +163,8 @@ list and closes the modal. The save button is disabled while a save is in
 flight.
 
 Delete asks `confirm()` then hard-deletes and reloads. A failed delete alerts.
+`deleteTask` reads `maintained_image_url` before deleting the row and removes
+the file afterwards (best-effort).
 
 ## History logging
 
@@ -196,8 +201,9 @@ The repo has no test/lint/typecheck setup (`next build` ignores TS errors), so:
 
 ## Accepted risks
 
-- Deleting a device permanently deletes its tasks, including their images'
-  database rows; the uploaded files stay orphaned in the `images` bucket.
+- Deleting a device permanently deletes its tasks; their image files are
+  removed from the `images` bucket by `deleteDevice` (best-effort — a failed
+  file delete leaves an orphan without failing the device delete).
 - The cascade FK is applied manually; a database without it rejects deleting a
   device that has tasks.
 - `task_name` has no uniqueness constraint; duplicate names are allowed.

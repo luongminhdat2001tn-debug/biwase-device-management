@@ -152,13 +152,20 @@ export async function updateDevice(id: number, updates: Partial<Device>): Promis
   return true
 }
 
-/** Xóa thiết bị (xóa cứng - bảng devices không có cột is_deleted) */
+/** Xóa thiết bị (xóa cứng) + dọn ảnh của các công việc liên quan */
 export async function deleteDevice(id: number): Promise<boolean> {
+  // Lấy ảnh công việc trước khi xóa (FK cascade xóa luôn các dòng tasks)
+  const { data: rows } = await supabase
+    .from('tasks')
+    .select('maintained_image_url')
+    .eq('device_id', id)
   const { error } = await supabase
     .from('devices')
     .delete()
     .eq('id', id)
   if (error) { console.error('deleteDevice error:', error); return false }
+  // Xóa file ảnh sau khi DB đã xóa xong; lỗi file không chặn thao tác chính
+  await Promise.all((rows || []).map((row) => deleteImage(row.maintained_image_url)))
   return true
 }
 
@@ -212,13 +219,21 @@ export async function updateTask(id: number, updates: Partial<Task>): Promise<bo
   return true
 }
 
-/** Xóa công việc (xóa cứng - bảng tasks không có cột is_deleted) */
+/** Xóa công việc (xóa cứng) + dọn ảnh đã lưu */
 export async function deleteTask(id: number): Promise<boolean> {
+  // Lấy ảnh trước khi xóa dòng
+  const { data: row } = await supabase
+    .from('tasks')
+    .select('maintained_image_url')
+    .eq('id', id)
+    .maybeSingle()
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', id)
   if (error) { console.error('deleteTask error:', error); return false }
+  // Xóa file ảnh sau khi DB đã xóa xong; lỗi file không chặn thao tác chính
+  if (row?.maintained_image_url) await deleteImage(row.maintained_image_url)
   return true
 }
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClipboardList, Plus, Edit2, Trash2, Search, X, Save, AlertCircle, Upload } from 'lucide-react'
 import type { Task, Device } from '@/lib/constants'
-import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage, addHistoryEntry } from '@/lib/db'
+import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage, deleteImage, addHistoryEntry } from '@/lib/db'
 
 type FormFields = 'deviceId' | 'taskName' | 'taskDescription' | 'expiredAt' | 'maintainedImageUrl'
 
@@ -189,9 +189,13 @@ export default function TasksPage() {
       }
       const ok = editingTask ? await updateTask(editingTask.id, values) : !!(await createTask(values))
       if (!ok) {
+        // Xóa file vừa upload để không để lại ảnh thừa khi ghi DB thất bại
+        if (uploadedImage) await deleteImage(uploadedImage)
         alert('❌ Lưu thất bại! Vui lòng thử lại.')
         return
       }
+      // DB đã trỏ sang ảnh mới -> xóa file ảnh cũ (lỗi file không chặn thao tác chính)
+      if (editingTask && uploadedImage) await deleteImage(editingTask.maintainedImageUrl)
       // Ghi lịch sử (lỗi log không chặn thao tác chính)
       await addHistoryEntry({
         taskName: values.taskName,

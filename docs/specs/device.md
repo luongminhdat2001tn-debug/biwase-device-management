@@ -83,7 +83,9 @@ Delete asks `confirm()` with the message `Bạn có chắc chắn muốn xóa "<
 followed by the warning `Lưu ý: Xóa thiết bị này, các mục công việc liên quan
 cũng sẽ bị xóa ở trang Quản Lý Thiết Bị`, then hard-deletes and reloads. The
 `tasks` FK uses `ON DELETE CASCADE`, so related jobs disappear with the device.
-A failed delete alerts.
+`deleteDevice` reads the related tasks' `maintained_image_url` values first and
+deletes those files from Storage after the row delete succeeds (best-effort; a
+failed file delete never fails the device delete). A failed delete alerts.
 
 ## History logging
 
