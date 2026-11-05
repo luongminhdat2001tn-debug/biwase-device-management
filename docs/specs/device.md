@@ -85,6 +85,16 @@ cũng sẽ bị xóa ở trang Quản Lý Thiết Bị`, then hard-deletes and r
 `tasks` FK uses `ON DELETE CASCADE`, so related jobs disappear with the device.
 A failed delete alerts.
 
+## History logging
+
+After a successful create, update or delete, the page calls
+`addHistoryEntry` (`lib/db.ts`) to append a `task_history_log` row:
+`task_name` = device name, `action` = `'Thiết bị'`, `user_name` = the session
+user, `details` = `Thêm thiết bị <MÃ>` / `Cập nhật thiết bị <MÃ>` /
+`Xóa thiết bị <MÃ>`. `date`/`time` are filled by the helper. Logging is
+best-effort: a failed insert only logs to the console and never blocks or
+reverses the device change.
+
 ## Verification
 
 The repo has no test/lint/typecheck setup (`next build` ignores TS errors), so:

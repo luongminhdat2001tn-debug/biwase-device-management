@@ -19,7 +19,7 @@ export default function HistoryPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   // Bộ lọc mới
-  const [filterTaskName, setFilterTaskName] = useState('')
+  const [filterName, setFilterName] = useState('')
   const [filterAction, setFilterAction] = useState('Tất cả')
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function HistoryPage() {
   }, [])
 
   // ------------------------------------------
-  // Lọc kết hợp: ngày, tên công việc, chức năng
+  // Lọc kết hợp: ngày, tên đối tượng, chức năng
   // Dữ liệu từ Supabase đã sắp xếp mới nhất lên đầu
   // KHÔNG dùng .reverse() để giữ nguyên thứ tự
   // ------------------------------------------
@@ -71,8 +71,8 @@ export default function HistoryPage() {
       }
     }
 
-    // Lọc theo tên công việc
-    if (filterTaskName && !entry.taskName.toLowerCase().includes(filterTaskName.toLowerCase())) return false
+    // Lọc theo tên đối tượng
+    if (filterName && !entry.taskName.toLowerCase().includes(filterName.toLowerCase())) return false
 
     // Lọc theo chức năng
     if (filterAction !== 'Tất cả' && entry.action !== filterAction) return false
@@ -80,12 +80,12 @@ export default function HistoryPage() {
     return true
   })
 
-  const hasFilter = dateFrom || dateTo || filterTaskName || filterAction !== 'Tất cả'
+  const hasFilter = dateFrom || dateTo || filterName || filterAction !== 'Tất cả'
 
   const clearAllFilters = () => {
     setDateFrom('')
     setDateTo('')
-    setFilterTaskName('')
+    setFilterName('')
     setFilterAction('Tất cả')
   }
 
@@ -95,7 +95,7 @@ export default function HistoryPage() {
       'Ngày': entry.date,
       'Thời gian': entry.time,
       'Họ và tên': entry.userName,
-      'Tên công việc': entry.taskName,
+      'Đối tượng': entry.taskName,
       'Chức năng': entry.action,
       'Thông tin': entry.details,
     }))
@@ -156,18 +156,18 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {/* Hàng 2: Lọc theo tên công việc, chức năng */}
+                {/* Hàng 2: Lọc theo tên đối tượng, chức năng */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-gray-400" />
                     <span className="text-sm font-medium text-gray-700">Lọc thêm:</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 whitespace-nowrap">Tên công việc:</label>
+                    <label className="text-sm text-gray-600 whitespace-nowrap">Tên đối tượng:</label>
                     <Input
-                      value={filterTaskName}
-                      onChange={(e) => setFilterTaskName(e.target.value)}
-                      placeholder="Nhập tên công việc..."
+                      value={filterName}
+                      onChange={(e) => setFilterName(e.target.value)}
+                      placeholder="Nhập tên đối tượng..."
                       className="border-2 w-56"
                     />
                   </div>
@@ -218,7 +218,7 @@ export default function HistoryPage() {
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 whitespace-nowrap">Ngày/tháng/năm</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700">Thời gian</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[140px]">Họ và tên</th>
-                      <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[200px]">Tên công việc</th>
+                      <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[200px]">Đối tượng</th>
                       <th className="text-center py-3 px-3 font-semibold text-gray-700">Chức năng</th>
                       <th className="text-left py-3 px-3 font-semibold text-gray-700 min-w-[200px]">Thông tin chức năng</th>
                     </tr>

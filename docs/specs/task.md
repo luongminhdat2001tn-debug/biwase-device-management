@@ -161,6 +161,15 @@ flight.
 
 Delete asks `confirm()` then hard-deletes and reloads. A failed delete alerts.
 
+## History logging
+
+After a successful create, update or delete, the page calls
+`addHistoryEntry` (`lib/db.ts`) to append a `task_history_log` row:
+`task_name` = task name, `action` = `'Công việc'`, `user_name` = the session
+user, `details` = `Thêm công việc` / `Cập nhật công việc` / `Xóa công việc`.
+`date`/`time` are filled by the helper. Logging is best-effort: a failed insert
+only logs to the console and never blocks or reverses the task change.
+
 ## Related change: deleting a device
 
 `app/devices/page.tsx` `handleDelete` confirm message gains the warning (exact

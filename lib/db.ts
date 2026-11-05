@@ -236,6 +236,23 @@ export async function getHistoryLog(): Promise<HistoryEntry[]> {
   return (data || []).map(mapHistoryFromDB)
 }
 
+/** Ghi lịch sử thao tác (date/time lấy tại thời điểm ghi) */
+export async function addHistoryEntry(entry: Omit<HistoryEntry, 'date' | 'time'>): Promise<boolean> {
+  const now = new Date()
+  const { error } = await supabase
+    .from('task_history_log')
+    .insert({
+      date: now.toLocaleDateString('vi-VN'),
+      time: now.toLocaleTimeString('vi-VN'),
+      task_name: entry.taskName,
+      user_name: entry.userName,
+      action: entry.action,
+      details: entry.details,
+    })
+  if (error) { console.error('addHistoryEntry error:', error); return false }
+  return true
+}
+
 // ==========================================
 // IMAGE UPLOAD - Upload ảnh lên Supabase Storage
 // ==========================================

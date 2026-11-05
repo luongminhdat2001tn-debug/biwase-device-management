@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { HardDrive, Plus, Edit2, Trash2, Search, X, Save, AlertCircle } from 'lucide-react'
 import type { Device } from '@/lib/constants'
-import { getDevices, findDeviceByDeviceId, createDevice, updateDevice, deleteDevice } from '@/lib/db'
+import { getDevices, findDeviceByDeviceId, createDevice, updateDevice, deleteDevice, addHistoryEntry } from '@/lib/db'
 
 export default function DevicesPage() {
   const [user, setUser] = useState<any>(null)
@@ -117,6 +117,13 @@ export default function DevicesPage() {
         alert('❌ Lưu thất bại! Vui lòng thử lại.')
         return
       }
+      // Ghi lịch sử (lỗi log không chặn thao tác chính)
+      await addHistoryEntry({
+        taskName: values.name,
+        userName: user?.name || user?.username || '',
+        action: 'Thiết bị',
+        details: `${editingDevice ? 'Cập nhật' : 'Thêm'} thiết bị ${values.deviceId}`,
+      })
       await loadDevices()
       setIsModalOpen(false)
     } finally {
@@ -131,6 +138,13 @@ export default function DevicesPage() {
       alert('❌ Xóa thất bại! Vui lòng thử lại.')
       return
     }
+    // Ghi lịch sử (lỗi log không chặn thao tác chính)
+    await addHistoryEntry({
+      taskName: device.name,
+      userName: user?.name || user?.username || '',
+      action: 'Thiết bị',
+      details: `Xóa thiết bị ${device.deviceId}`,
+    })
     await loadDevices()
   }
 

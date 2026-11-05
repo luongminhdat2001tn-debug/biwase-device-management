@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ClipboardList, Plus, Edit2, Trash2, Search, X, Save, AlertCircle, Upload } from 'lucide-react'
 import type { Task, Device } from '@/lib/constants'
-import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage } from '@/lib/db'
+import { getTasks, getDevices, createTask, updateTask, deleteTask, uploadImage, addHistoryEntry } from '@/lib/db'
 
 type FormFields = 'deviceId' | 'taskName' | 'taskDescription' | 'expiredAt' | 'maintainedImageUrl'
 
@@ -192,6 +192,13 @@ export default function TasksPage() {
         alert('❌ Lưu thất bại! Vui lòng thử lại.')
         return
       }
+      // Ghi lịch sử (lỗi log không chặn thao tác chính)
+      await addHistoryEntry({
+        taskName: values.taskName,
+        userName: user?.name || user?.username || '',
+        action: 'Công việc',
+        details: editingTask ? 'Cập nhật công việc' : 'Thêm công việc',
+      })
       await loadData()
       setIsModalOpen(false)
     } finally {
@@ -206,6 +213,13 @@ export default function TasksPage() {
       alert('❌ Xóa thất bại! Vui lòng thử lại.')
       return
     }
+    // Ghi lịch sử (lỗi log không chặn thao tác chính)
+    await addHistoryEntry({
+      taskName: task.taskName,
+      userName: user?.name || user?.username || '',
+      action: 'Công việc',
+      details: 'Xóa công việc',
+    })
     await loadData()
   }
 
