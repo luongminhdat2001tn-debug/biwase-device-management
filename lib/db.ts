@@ -7,7 +7,6 @@
 //
 // CÁC BẢNG:
 //   - device_accounts: Tài khoản người dùng
-//   - products: Sản phẩm trong kho
 //   - devices: Thiết bị
 //   - tasks: Công việc bảo trì thiết bị
 //   - task_history_log: Lịch sử thao tác thiết bị / công việc
@@ -17,7 +16,7 @@
 // ==========================================
 
 import { supabase } from './supabase'
-import type { Account, Product, HistoryEntry, Device, Task } from './constants'
+import type { Account, HistoryEntry, Device, Task } from './constants'
 
 // ==========================================
 // DEVICE_ACCOUNTS - Tài khoản
@@ -83,137 +82,6 @@ export async function deleteAccountFromDB(id: number): Promise<boolean> {
     .delete()
     .eq('id', id)
   if (error) { console.error('deleteAccount error:', error); return false }
-  return true
-}
-
-// ==========================================
-// PRODUCTS - Sản phẩm trong kho
-// ==========================================
-
-/** Lấy sản phẩm theo kho (chỉ lấy chưa bị xóa) */
-export async function getProductsByWarehouse(warehouseId: string): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('warehouse_id', warehouseId)
-    .eq('is_deleted', false)
-    .order('name', { ascending: true })
-  if (error) { console.error('getProducts error:', error); return [] }
-  return (data || []).map(mapProductFromDB)
-}
-
-/** Lấy tất cả sản phẩm (cho tồn kho) */
-export async function getAllProducts(): Promise<Record<string, Product[]>> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('is_deleted', false)
-    .order('name', { ascending: true })
-  if (error) { console.error('getAllProducts error:', error); return {} }
-
-  // Gom theo warehouse_id
-  const grouped: Record<string, Product[]> = {}
-  for (const row of data || []) {
-    const wid = row.warehouse_id
-    if (!grouped[wid]) grouped[wid] = []
-    grouped[wid].push(mapProductFromDB(row))
-  }
-  return grouped
-}
-
-/** Chuẩn hóa mã hàng để so sánh trùng (bỏ trắng thừa, đưa về chữ hoa) */
-export function normalizeProductCode(code: string): string {
-  return (code || '').trim().toUpperCase()
-}
-
-/** Tìm sản phẩm theo mã trong MỘT kho (bỏ qua bản ghi đã xóa mềm) */
-export async function findProductByCodeInWarehouse(code: string, warehouseId: string): Promise<{ id: number } | null> {
-  const normalized = normalizeProductCode(code)
-  if (!normalized || !warehouseId) return null
-  // ilike (không wildcard) = so sánh chính xác, không phân biệt hoa/thường
-  const { data, error } = await supabase
-    .from('products')
-    .select('id')
-    .eq('warehouse_id', warehouseId)
-    .ilike('code', normalized)
-    .eq('is_deleted', false)
-    .limit(1)
-    .maybeSingle()
-  if (error || !data) return null
-  return { id: (data as any).id as number }
-}
-
-/** Tìm sản phẩm theo tên trong MỘT kho (bỏ qua bản ghi đã xóa mềm) */
-export async function findProductByNameInWarehouse(name: string, warehouseId: string): Promise<{ id: number } | null> {
-  const normalized = (name || '').trim()
-  if (!normalized || !warehouseId) return null
-  // ilike (không wildcard) = so sánh chính xác, không phân biệt hoa/thường
-  const { data, error } = await supabase
-    .from('products')
-    .select('id')
-    .eq('warehouse_id', warehouseId)
-    .ilike('name', normalized)
-    .eq('is_deleted', false)
-    .limit(1)
-    .maybeSingle()
-  if (error || !data) return null
-  return { id: (data as any).id as number }
-}
-
-/** Tạo sản phẩm mới (nhập liệu) */
-export async function createProduct(product: Omit<Product, 'id'> & { warehouseId: string }): Promise<Product | null> {
-  const { data, error } = await supabase
-    .from('products')
-    .insert({
-      warehouse_id: product.warehouseId,
-      code: product.code,
-      name: product.name,
-      category_name: product.categoryName,
-      unit: product.unit,
-      quantity: product.quantity,
-      weight: product.weight,
-      weight_unit: product.weightUnit || 'kg',
-      location: product.location,
-      location_image_url: product.locationImage || null,
-      product_image_url: product.productImage || null,
-      import_date: product.importDate || null,
-    })
-    .select()
-    .single()
-  if (error) { console.error('createProduct error:', error); return null }
-  return mapProductFromDB(data)
-}
-
-/** Cập nhật sản phẩm */
-export async function updateProduct(id: number, updates: Partial<Product>): Promise<boolean> {
-  const dbUpdates: any = {}
-  if (updates.code !== undefined) dbUpdates.code = updates.code
-  if (updates.name !== undefined) dbUpdates.name = updates.name
-  if (updates.categoryName !== undefined) dbUpdates.category_name = updates.categoryName
-  if (updates.unit !== undefined) dbUpdates.unit = updates.unit
-  if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity
-  if (updates.weight !== undefined) dbUpdates.weight = updates.weight
-  if (updates.weightUnit !== undefined) dbUpdates.weight_unit = updates.weightUnit
-  if (updates.location !== undefined) dbUpdates.location = updates.location
-  if (updates.locationImage !== undefined) dbUpdates.location_image_url = updates.locationImage
-  if (updates.productImage !== undefined) dbUpdates.product_image_url = updates.productImage
-  if (updates.importDate !== undefined) dbUpdates.import_date = updates.importDate
-
-  const { error } = await supabase
-    .from('products')
-    .update(dbUpdates)
-    .eq('id', id)
-  if (error) { console.error('updateProduct error:', error); return false }
-  return true
-}
-
-/** Xóa sản phẩm (soft delete) */
-export async function deleteProduct(id: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('products')
-    .update({ is_deleted: true })
-    .eq('id', id)
-  if (error) { console.error('deleteProduct error:', error); return false }
   return true
 }
 
@@ -373,7 +241,7 @@ export async function getHistoryLog(): Promise<HistoryEntry[]> {
 // ==========================================
 
 /** Upload file ảnh, trả về public URL */
-export async function uploadImage(file: File, folder: string = 'products'): Promise<string | null> {
+export async function uploadImage(file: File, folder: string = 'maintained'): Promise<string | null> {
   // Tạo tên file unique bằng timestamp
   const fileExt = file.name.split('.').pop()
   const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
@@ -428,23 +296,6 @@ function mapAccountToDB(acc: any): any {
     chuc_nang: acc.chucNang || ['xem-co-ban'],
     status: acc.status || 'active',
     is_admin: acc.isAdmin || false,
-  }
-}
-
-function mapProductFromDB(row: any): Product {
-  return {
-    id: row.id,
-    code: row.code || '',
-    name: row.name || '',
-    categoryName: row.category_name || '',
-    unit: row.unit || '',
-    quantity: row.quantity || 0,
-    weight: parseFloat(row.weight) || 0,
-    weightUnit: row.weight_unit || 'kg',
-    location: row.location || '',
-    locationImage: row.location_image_url || '',
-    productImage: row.product_image_url || '',
-    importDate: row.import_date || '',
   }
 }
 

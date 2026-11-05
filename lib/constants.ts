@@ -16,27 +16,11 @@
 // ------------------------------------------
 export const CHUC_NANG_LIST = [
   { id: 'xem-co-ban', name: 'Xem thông tin cơ bản', description: 'Xem tất cả thông tin, không thao tác' },
-  { id: 'nhap-lieu', name: 'Nhập liệu', description: 'Có thể nhập hàng vào kho' },
-  { id: 'xuat-kho', name: 'Xuất kho', description: 'Có thể xuất hàng ra khỏi kho' },
-  { id: 'ton-kho', name: 'Tồn kho', description: 'Có thể chỉnh sửa thông tin sản phẩm tồn kho' },
   { id: 'them-tai-khoan', name: 'Thêm tài khoản', description: 'Có thể thêm/sửa/xóa tài khoản' },
-  { id: 'kho-vat-tu', name: 'Kho Vật Tư Nhà Máy', description: 'Có quyền truy cập kho vật tư của nhà máy' },
-  { id: 'kho-xay-dung', name: 'Kho Xây Dựng Cơ Bản', description: 'Có quyền truy cập kho xây dựng cơ bản' },
-  { id: 'kho-phong-thi-nghiem', name: 'Kho Phòng Thí Nghiệm', description: 'Có quyền truy cập kho phòng thí nghiệm' },
-  { id: 'kho-thuong-mai', name: 'Kho Thương Mại', description: 'Có quyền truy cập kho thương mại' },
   { id: 'quan-ly-thiet-bi', name: 'Quản lý thiết bị', description: 'Có thể xem/thêm/sửa/xóa thiết bị' },
   { id: 'quan-ly-cong-viec', name: 'Quản lý công việc', description: 'Có thể xem/thêm/sửa/xóa công việc' },
 ]
 
-// ------------------------------------------
-// DANH SÁCH CÁC KHO
-// ------------------------------------------
-export const WAREHOUSES = [
-  { id: 'kho-vat-tu', name: 'Kho Vật Tư', icon: '🔧', color: 'bg-blue-500' },
-  { id: 'kho-xay-dung', name: 'Kho Xây Dựng', icon: '🏗️', color: 'bg-orange-500' },
-  { id: 'kho-thuong-mai', name: 'Kho Thương Mại', icon: '🛒', color: 'bg-green-500' },
-  { id: 'kho-phong-thi-nghiem', name: 'Kho Phòng Thí Nghiệm', icon: '🔬', color: 'bg-purple-500' },
-]
 
 // ------------------------------------------
 // INTERFACE TÀI KHOẢN
@@ -51,24 +35,6 @@ export interface Account {
   status: 'active' | 'inactive'
   createdAt: string
   isAdmin?: boolean     // Đánh dấu tài khoản admin (không thể xóa)
-}
-
-// ------------------------------------------
-// INTERFACE SẢN PHẨM TRONG KHO
-// ------------------------------------------
-export interface Product {
-  id: number
-  code: string
-  name: string
-  categoryName: string   // Danh mục hàng (bắt buộc)
-  unit: string
-  quantity: number
-  weight: number
-  weightUnit?: string     // Đơn vị trọng lượng (kg, g, lít, ml, chai...)
-  location: string
-  locationImage: string   // URL ảnh vị trí (Supabase Storage)
-  productImage: string    // URL ảnh sản phẩm (Supabase Storage)
-  importDate: string
 }
 
 // ------------------------------------------

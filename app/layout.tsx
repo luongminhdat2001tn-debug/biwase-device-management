@@ -22,8 +22,8 @@ const roboto = Roboto({
 
 // Metadata SEO cho trang web
 export const metadata: Metadata = {
-  title: 'Công ty cổ phần nước BIWASE - LONG AN | Hệ Thống Quản Lý',
-  description: 'Hệ thống quản lý Công ty cổ phần nước BIWASE - LONG AN - Quản lý kho, nhân sự và hoạt động công ty',
+  title: 'Công ty cổ phần nước BIWASE - LONG AN | Hệ Thống Bảo Trì Thiết Bị',
+  description: 'Hệ thống bảo trì thiết bị Công ty cổ phần nước BIWASE - LONG AN',
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',
