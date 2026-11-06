@@ -290,10 +290,12 @@ export async function uploadImage(file: File, folder: string = 'maintained'): Pr
 
 /** Xóa ảnh từ Storage (dựa trên URL) */
 export async function deleteImage(url: string): Promise<void> {
+  const deletedPath = [];
   if (!url || !url.includes('/storage/v1/object/public/images/')) return
   const path = url.split('/storage/v1/object/public/images/')[1]
-  if (path) {
-    await supabase.storage.from('images').remove([path])
+  deletedPath.push(path)
+  if (deletedPath.length > 0) {
+    await supabase.storage.from('images').remove(deletedPath)
   }
 }
 

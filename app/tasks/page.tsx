@@ -185,6 +185,7 @@ export default function TasksPage() {
         taskDescription: formData.taskDescription.trim(),
         remainingDay: remainingDays ?? 0,
         expiredAt: formData.expiredAt,
+        originMintainedImageUrl: editingTask ? editingTask.maintainedImageUrl : null, // giữ nguyên để xóa file cũ khi update
         maintainedImageUrl: uploadedImage ?? imagePreview,
       }
       const ok = editingTask ? await updateTask(editingTask.id, values) : !!(await createTask(values))
@@ -195,7 +196,7 @@ export default function TasksPage() {
         return
       }
       // DB đã trỏ sang ảnh mới -> xóa file ảnh cũ (lỗi file không chặn thao tác chính)
-      if (editingTask && uploadedImage) await deleteImage(editingTask.maintainedImageUrl)
+      if (editingTask && uploadedImage && values.originMintainedImageUrl) await deleteImage(values.originMintainedImageUrl)
       // Ghi lịch sử (lỗi log không chặn thao tác chính)
       await addHistoryEntry({
         taskName: values.taskName,
